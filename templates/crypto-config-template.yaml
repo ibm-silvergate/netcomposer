@@ -1,0 +1,32 @@
+# ---------------------------------------------------------------------------
+# "OrdererOrgs" - Definition of organizations managing orderer nodes
+# ---------------------------------------------------------------------------
+OrdererOrgs:
+  - Name: ordererOrg
+    Domain: {{.Domain}}
+    CA:
+        Country: AR
+        Province: Buenos Aires
+        Locality: Buenos Aires
+    Specs:
+        - Hostname: orderer
+    Template:
+      Count: {{.OrdererNodes}}
+      Start: 1
+# ---------------------------------------------------------------------------
+# "PeerOrgs" - Definition of organizations managing peer nodes
+# ---------------------------------------------------------------------------
+PeerOrgs:
+{{range $i := Sequence 1 .PeerOrgs}}
+  - Name: org{{$i}}
+    Domain: org{{$i}}.{{$.Domain}}
+    CA:
+        Country: AR
+        Province: Buenos Aires
+        Locality: Buenos Aires
+    Template:
+      Count: {{$.PeersPerOrg}}
+      Start: 1
+    Users:
+      Count: 1
+{{end}}
