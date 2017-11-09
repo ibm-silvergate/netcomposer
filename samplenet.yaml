@@ -11,6 +11,7 @@ orderer:
 #orderer:
 #    type: "kafka"
 #    kafkaBrokers: 3
+#    zookeeperNodes: 3
 
 db:
     provider: "goleveldb"

@@ -1,27 +1,36 @@
 version: '2'
 
 services:
-  {{if eq $.OrdererType "kafka" -}}
-  zookeeper.{{.Name}}:
-    container_name: zookeeper.{{.Name}}
+{{if eq $.OrdererType "kafka" -}}
+  {{range $.ZooKeeperNodes}}
+  {{.Name}}:
+    container_name: {{.Name}}
     image: {{$.DockerNS}}/fabric-zookeeper:{{$.Arch}}-{{$.Version}}
     restart: always
+    environment:
+      - ZOO_MY_ID={{.ID}}
+      - ZOO_SERVERS={{range $i, $zknode := $.ZooKeeperNodes}}server.{{$i}}={{$zknode.Name}}:2888:3888 {{end}}
+    ports:
+      - 2181
+      - 2888
+      - 3888
+  {{end -}}
 
-{{range .KafkaBrokers}}
+  {{range .KafkaBrokers}}
   {{.Name}}:
     container_name: {{.Name}}
     image: {{$.DockerNS}}/fabric-kafka:{{$.Arch}}-{{$.Version}}
     restart: always
     environment:
-      - KAFKA_BROKER_ID={{.BrokerID}}
-      - KAFKA_ZOOKEEPER_CONNECT=zookeeper.{{$.Name}}:2181
+      - KAFKA_BROKER_ID={{.ID}}
+      - KAFKA_ZOOKEEPER_CONNECT={{range $.ZooKeeperNodes}}{{.Name}}:2181,{{end}}
       - KAFKA_DEFAULT_REPLICATION_FACTOR=1
     ports:
-          - {{.ExposedPort}}:{{.Port}}
-    depends_on:
-      - zookeeper.{{$.Name}}
-  {{end -}}
-{{end}}
+      - 9092
+    depends_on: {{range $.ZooKeeperNodes}}
+      - {{.Name}}{{end}}
+  {{end}}
+{{end -}}
 
 {{range .Orderers}}
   {{.Name}}:

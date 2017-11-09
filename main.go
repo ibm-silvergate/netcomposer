@@ -49,8 +49,9 @@ type configuration struct {
 }
 
 type ordererSpec struct {
-	Type         string `yaml:"type"`
-	KafkaBrokers int    `yaml:"kafkaBrokers"`
+	Type           string `yaml:"type"`
+	KafkaBrokers   int    `yaml:"kafkaBrokers"`
+	ZookeeperNodes int    `yaml:"zookeeperNodes"`
 }
 
 type dbSpec struct {
@@ -73,6 +74,7 @@ type genInfo struct {
 	Domain              string
 	OrdererType         string
 	KafkaBrokers        []kafkaBroker
+	ZooKeeperNodes      []zkNode
 	DBProvider          string
 	OrdererOrganization organization
 	Orderers            []orderer
@@ -119,10 +121,13 @@ type peerdb struct {
 }
 
 type kafkaBroker struct {
-	Name        string
-	BrokerID    int
-	ExposedPort int
-	Port        int
+	ID   int
+	Name string
+}
+
+type zkNode struct {
+	ID   int
+	Name string
 }
 
 var (
@@ -190,6 +195,11 @@ func loadConfig() *configuration {
 
 	if config.Orderer.Type == "kafka" && config.Orderer.KafkaBrokers < 1 {
 		fmt.Fprintln(os.Stderr, fmt.Sprintf("A positive number of brokers is required if orderer type is %s", config.Orderer.Type))
+		os.Exit(1)
+	}
+
+	if config.Orderer.Type == "kafka" && config.Orderer.ZookeeperNodes < 1 {
+		fmt.Fprintln(os.Stderr, fmt.Sprintf("A positive number of zookeeper nodes is required if orderer type is %s", config.Orderer.Type))
 		os.Exit(1)
 	}
 
@@ -298,10 +308,16 @@ func main() {
 	kafkaBrokerList := make([]kafkaBroker, config.Orderer.KafkaBrokers)
 	for i := 0; i < config.Orderer.KafkaBrokers; i++ {
 		kafkaBrokerList[i] = kafkaBroker{
-			Name:        fmt.Sprintf("kafka%d.%s", i+1, config.Domain),
-			BrokerID:    i,
-			ExposedPort: 9092 + i,
-			Port:        9092,
+			ID:   i,
+			Name: fmt.Sprintf("kafka%d.%s", i, config.Domain),
+		}
+	}
+
+	zkNodeList := make([]zkNode, config.Orderer.ZookeeperNodes)
+	for i := 0; i < config.Orderer.ZookeeperNodes; i++ {
+		zkNodeList[i] = zkNode{
+			ID:   i,
+			Name: fmt.Sprintf("zookeeper%d.%s", i, config.Domain),
 		}
 	}
 
@@ -312,6 +328,7 @@ func main() {
 		Name:                config.Network,
 		OrdererType:         config.Orderer.Type,
 		KafkaBrokers:        kafkaBrokerList,
+		ZooKeeperNodes:      zkNodeList,
 		DBProvider:          config.DB.Provider,
 		OrdererOrganization: *ordererOrganization,
 		Orderers:            ordererList,
