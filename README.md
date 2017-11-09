@@ -19,7 +19,8 @@ The tool takes as input a config file specifying the network components:
     network:                "samplenet"
     domain:                 "samplenet.com"
 
-    ordererType:            "solo"
+    orderer:
+        type: "solo"
 
     db:
         provider:   "goleveldb"
@@ -58,7 +59,7 @@ The tool takes as input a config file specifying the network components:
 
 #### 4. Create channel (only in one peer, generated block file will be shared by peer containers)
 
-    cd channel-artifacts && peer channel create -o orderer1.samplenet.com:7050 -c bigchannel -f bigchannel.tx --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA
+    cd channel-artifacts && peer channel create -o orderer1.samplenet.com:7050 -c bigchannel -f bigchannel.tx -t 10 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA
 
 #### 5. Join peers to channel (in each peer)
 
@@ -70,7 +71,7 @@ The tool takes as input a config file specifying the network components:
 
 #### 7. Instantiate a chaincode (only in one peer)
 
-    peer chaincode instantiate -o orderer1.samplenet.com:7050 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C bigchannel -n mycc1 -v 1.0 -c '{"Args":["init","a","100","b","200"]}' -P "OR ('org1.member','org2.member')"
+    peer chaincode instantiate -o orderer1.samplenet.com:7050 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C bigchannel -n mycc1 -v 1.0 -c '{"Args":["init","a","100","b","200"]}' -P "OR ('org1MSP.member','org2MSP.member')"
 
 #### 7.a Upgrade a chaincode (only in one peer)
 
@@ -82,7 +83,7 @@ The tool takes as input a config file specifying the network components:
 
     peer chaincode query -o orderer1.samplenet.com:7050 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C bigchannel -n mycc1 -c '{"Args":["query","a"]}'
 
-    peer chaincode invoke -o orderer1.samplenet.com:7050 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C bigchannel -n mycc1 -c '{"Args":["invoke", "a", "b", "1"]}'
+    peer chaincode invoke -o orderer1.samplenet.com:7050 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C bigchannel -n mycc1 -c '{"Args":["invoke", "a", "b", "10"]}'
 
 ### 9 Stop existing network
 

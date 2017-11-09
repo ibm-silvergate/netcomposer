@@ -32,20 +32,25 @@ import (
 )
 
 type configuration struct {
-	DockerNS       string `yaml:"DOCKER_NS"`
-	Arch           string `yaml:"ARCH"`
-	Version        string `yaml:"VERSION"`
-	Network        string `yaml:"network"`
-	Domain         string `yaml:"domain"`
-	OrdererType    string `yaml:"ordererType"`
-	DB             dbSpec `yaml:"db"`
-	OrdererNodes   int    `yaml:"ordererNodes"`
-	PeerOrgs       int    `yaml:"peerOrganizations"`
-	PeersPerOrg    int    `yaml:"peersPerOrganization"`
-	PeerOrgUsers   int    `yaml:"usersPerOrganization"`
-	LogLevel       string `yaml:"logLevel"`
-	TLSEnabled     bool   `yaml:"tlsEnabled"`
-	ChaincodesPath string `yaml:"chaincodesPath"`
+	DockerNS       string      `yaml:"DOCKER_NS"`
+	Arch           string      `yaml:"ARCH"`
+	Version        string      `yaml:"VERSION"`
+	Network        string      `yaml:"network"`
+	Domain         string      `yaml:"domain"`
+	Orderer        ordererSpec `yaml:"orderer"`
+	DB             dbSpec      `yaml:"db"`
+	OrdererNodes   int         `yaml:"ordererNodes"`
+	PeerOrgs       int         `yaml:"peerOrganizations"`
+	PeersPerOrg    int         `yaml:"peersPerOrganization"`
+	PeerOrgUsers   int         `yaml:"usersPerOrganization"`
+	LogLevel       string      `yaml:"logLevel"`
+	TLSEnabled     bool        `yaml:"tlsEnabled"`
+	ChaincodesPath string      `yaml:"chaincodesPath"`
+}
+
+type ordererSpec struct {
+	Type         string `yaml:"type"`
+	KafkaBrokers int    `yaml:"kafkaBrokers"`
 }
 
 type dbSpec struct {
@@ -67,6 +72,7 @@ type genInfo struct {
 	Name                string
 	Domain              string
 	OrdererType         string
+	KafkaBrokers        []kafkaBroker
 	DBProvider          string
 	OrdererOrganization organization
 	Orderers            []orderer
@@ -82,34 +88,41 @@ type organization struct {
 }
 
 type orderer struct {
-	Name          string
-	Organization  organization
-	Port          int
-	ContainerPort int
+	Name         string
+	Organization organization
+	ExposedPort  int
+	Port         int
 }
 
 type peer struct {
 	Name                string
 	Organization        organization
 	OrdererOrganization organization
+	ExposedPort         int
 	Port                int
-	ContainerPort       int
+	ExposedEventPort    int
 	EventPort           int
-	ContainerEventPort  int
 	DB                  peerdb
 }
 
 type peerdb struct {
-	Name          string
-	Provider      string
-	Port          int
-	ContainerPort int
-	Namespace     string
-	Image         string
-	Username      string
-	Password      string
-	Driver        string
-	DB            string
+	Name        string
+	Provider    string
+	ExposedPort int
+	Port        int
+	Namespace   string
+	Image       string
+	Username    string
+	Password    string
+	Driver      string
+	DB          string
+}
+
+type kafkaBroker struct {
+	Name        string
+	BrokerID    int
+	ExposedPort int
+	Port        int
 }
 
 var (
@@ -165,13 +178,18 @@ func loadConfig() *configuration {
 		os.Exit(1)
 	}
 
-	if config.OrdererType != "solo" && config.OrdererType != "kafka" {
-		fmt.Fprintln(os.Stderr, fmt.Sprintf("Unsupported orderer type %s", config.OrdererType))
+	if config.Orderer.Type != "solo" && config.Orderer.Type != "kafka" {
+		fmt.Fprintln(os.Stderr, fmt.Sprintf("Unsupported orderer type %s", config.Orderer.Type))
 		os.Exit(1)
 	}
 
-	if config.OrdererType == "solo" && config.OrdererNodes != 1 {
-		fmt.Fprintln(os.Stderr, fmt.Sprintf("Only one orderer node must be specified if orderer type is %s", config.OrdererType))
+	if config.Orderer.Type == "solo" && config.OrdererNodes != 1 {
+		fmt.Fprintln(os.Stderr, fmt.Sprintf("Only one orderer node must be specified if orderer type is %s", config.Orderer.Type))
+		os.Exit(1)
+	}
+
+	if config.Orderer.Type == "kafka" && config.Orderer.KafkaBrokers < 1 {
+		fmt.Fprintln(os.Stderr, fmt.Sprintf("A positive number of brokers is required if orderer type is %s", config.Orderer.Type))
 		os.Exit(1)
 	}
 
@@ -228,10 +246,10 @@ func main() {
 	ordererList := make([]orderer, config.OrdererNodes)
 	for i := 0; i < config.OrdererNodes; i++ {
 		ordererList[i] = orderer{
-			Name:          fmt.Sprintf("orderer%d.%s", i+1, ordererOrganization.Domain),
-			Organization:  *ordererOrganization,
-			Port:          7050 + 100*i,
-			ContainerPort: 7050,
+			Name:         fmt.Sprintf("orderer%d.%s", i+1, ordererOrganization.Domain),
+			Organization: *ordererOrganization,
+			ExposedPort:  7050 + 100*i,
+			Port:         7050,
 		}
 	}
 
@@ -252,28 +270,38 @@ func main() {
 			eventHostPort := 7053 + 10*offset
 
 			peerdb := &peerdb{
-				Name:          fmt.Sprintf("peer%d.db.%s", j+1, peerOrganizationList[i].Domain),
-				Provider:      config.DB.Provider,
-				Port:          dbPort,
-				ContainerPort: config.DB.Port,
-				Namespace:     config.DB.Namespace,
-				Image:         config.DB.Image,
-				Username:      config.DB.Username,
-				Password:      config.DB.Password,
-				Driver:        config.DB.Driver,
-				DB:            config.DB.DB,
+				Name:        fmt.Sprintf("peer%d.db.%s", j+1, peerOrganizationList[i].Domain),
+				Provider:    config.DB.Provider,
+				ExposedPort: dbPort,
+				Port:        config.DB.Port,
+				Namespace:   config.DB.Namespace,
+				Image:       config.DB.Image,
+				Username:    config.DB.Username,
+				Password:    config.DB.Password,
+				Driver:      config.DB.Driver,
+				DB:          config.DB.DB,
 			}
 
 			peerList[i*config.PeersPerOrg+j] = peer{
 				Name:                fmt.Sprintf("peer%d.%s", j+1, peerOrganizationList[i].Domain),
 				Organization:        peerOrganizationList[i],
 				OrdererOrganization: *ordererOrganization,
-				Port:                peerHostPort,
-				ContainerPort:       7051,
-				EventPort:           eventHostPort,
-				ContainerEventPort:  7053,
+				ExposedPort:         peerHostPort,
+				Port:                7051,
+				ExposedEventPort:    eventHostPort,
+				EventPort:           7053,
 				DB:                  *peerdb,
 			}
+		}
+	}
+
+	kafkaBrokerList := make([]kafkaBroker, config.Orderer.KafkaBrokers)
+	for i := 0; i < config.Orderer.KafkaBrokers; i++ {
+		kafkaBrokerList[i] = kafkaBroker{
+			Name:        fmt.Sprintf("kafka%d.%s", i+1, config.Domain),
+			BrokerID:    i,
+			ExposedPort: 9092 + i,
+			Port:        9092,
 		}
 	}
 
@@ -282,7 +310,8 @@ func main() {
 		Arch:                config.Arch,
 		Version:             config.Version,
 		Name:                config.Network,
-		OrdererType:         config.OrdererType,
+		OrdererType:         config.Orderer.Type,
+		KafkaBrokers:        kafkaBrokerList,
 		DBProvider:          config.DB.Provider,
 		OrdererOrganization: *ordererOrganization,
 		Orderers:            ordererList,
