@@ -47,8 +47,7 @@ bin/%:	$(PROJECT_FILES)
 	$(CGO_FLAGS) GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ./tools/$(GOOS)-$(GOARCH)/cryptogen -tags "$(GO_TAGS)" -ldflags "$(GO_LDFLAGS)" github.com/hyperledger/fabric/common/tools/cryptogen
 	rsync -rupE templates/ bin/$(GOOS)-$(GOARCH)/templates
 	rsync -rupE tools/$(GOOS)-$(GOARCH) bin/$(GOOS)-$(GOARCH)/tools
-	cd $(@D) && tar czf ../../downloadable/netcomposer-$(GOOS)-$(GOARCH).tar.gz .
+	cd $(@D) && tar czf ../../bin/netcomposer-$(GOOS)-$(GOARCH).tar.gz .
 
 clean:
-	@rm -rf downloadable/*
 	@rm -rf bin
