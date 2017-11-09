@@ -3,18 +3,20 @@ version: '2'
 services:
   {{if eq $.OrdererType "kafka" -}}
   zookeeper:
+    container_name: zookeeper.{{.Name}}
     image: {{$.DockerNS}}/fabric-zookeeper:{{$.Arch}}-{{$.Version}}
     restart: always
 
   kafka:
+    container_name: kafka.{{.Name}}
     image: {{$.DockerNS}}/fabric-kafka:{{$.Arch}}-{{$.Version}}
     restart: always
     environment:
       - KAFKA_BROKER_ID=0
-      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper.{{.Name}}:2181
       - KAFKA_DEFAULT_REPLICATION_FACTOR=1
     ports:
-      - '9092'
+      - 9092:9092
     depends_on:
       - zookeeper
   {{end -}}
