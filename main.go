@@ -308,16 +308,16 @@ func main() {
 	kafkaBrokerList := make([]kafkaBroker, config.Orderer.KafkaBrokers)
 	for i := 0; i < config.Orderer.KafkaBrokers; i++ {
 		kafkaBrokerList[i] = kafkaBroker{
-			ID:   i,
-			Name: fmt.Sprintf("kafka%d.%s", i, config.Domain),
+			ID:   i + 1,
+			Name: fmt.Sprintf("kafka%d.%s", i+1, config.Domain),
 		}
 	}
 
 	zkNodeList := make([]zkNode, config.Orderer.ZookeeperNodes)
 	for i := 0; i < config.Orderer.ZookeeperNodes; i++ {
 		zkNodeList[i] = zkNode{
-			ID:   i,
-			Name: fmt.Sprintf("zookeeper%d.%s", i, config.Domain),
+			ID:   i + 1,
+			Name: fmt.Sprintf("zookeeper%d.%s", i+1, config.Domain),
 		}
 	}
 
@@ -458,6 +458,7 @@ func loadTemplate(config *configuration, templateFile string) *template.Template
 	fm := template.FuncMap{
 		"Sequence": sequence,
 		"ToLower":  strings.ToLower,
+		"Inc":      inc,
 	}
 
 	t, err := template.New(templateFile).Funcs(fm).ParseFiles(templateFilePath)
@@ -476,6 +477,10 @@ func sequence(start, end int) (stream chan int) {
 		close(stream)
 	}()
 	return
+}
+
+func inc(val int) int {
+	return val + 1
 }
 
 func execTemplate(t *template.Template, gi *genInfo, c *configuration, targetFile string) error {

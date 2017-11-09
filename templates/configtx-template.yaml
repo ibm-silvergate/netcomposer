@@ -39,8 +39,7 @@ Profiles:
                 # Brokers: A list of Kafka brokers to which the orderer connects
                 # NOTE: Use IP:port notation
                 Brokers:{{range $.KafkaBrokers}}
-                    - {{.Name}}:9092
-                {{end}}
+                    - {{.Name}}:9092{{end}}
 
             # Organizations is the list of orgs which are defined as participants on
             # the orderer side of the network

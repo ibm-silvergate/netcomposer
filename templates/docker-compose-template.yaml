@@ -9,7 +9,7 @@ services:
     restart: always
     environment:
       - ZOO_MY_ID={{.ID}}
-      - ZOO_SERVERS={{range $i, $zknode := $.ZooKeeperNodes}}server.{{$i}}={{$zknode.Name}}:2888:3888 {{end}}
+      - ZOO_SERVERS={{range $i, $zknode := $.ZooKeeperNodes}}server.{{Inc $i}}={{$zknode.Name}}:2888:3888 {{end}}
     ports:
       - 2181
       - 2888
