@@ -11,7 +11,7 @@ OrdererOrgs:
     Specs:
         - Hostname: orderer
     Template:
-      Count: {{.OrdererNodes}}
+      Count: {{.Orderer.Consenters}}
       Start: 1
 # ---------------------------------------------------------------------------
 # "PeerOrgs" - Definition of organizations managing peer nodes

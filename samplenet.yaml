@@ -10,6 +10,7 @@ orderer:
 
 #orderer:
 #    type: "kafka"
+#    consenters: 3
 #    kafkaBrokers: 3
 #    zookeeperNodes: 3
 
@@ -21,7 +22,6 @@ db:
 #    port: 5984
 #    hostPort: 5984
 
-ordererNodes:           1
 peerOrganizations:      1
 peersPerOrganization:   1
 usersPerOrganization:   1

@@ -39,7 +39,6 @@ type configuration struct {
 	Domain         string      `yaml:"domain"`
 	Orderer        ordererSpec `yaml:"orderer"`
 	DB             dbSpec      `yaml:"db"`
-	OrdererNodes   int         `yaml:"ordererNodes"`
 	PeerOrgs       int         `yaml:"peerOrganizations"`
 	PeersPerOrg    int         `yaml:"peersPerOrganization"`
 	PeerOrgUsers   int         `yaml:"usersPerOrganization"`
@@ -50,6 +49,7 @@ type configuration struct {
 
 type ordererSpec struct {
 	Type           string `yaml:"type"`
+	Consenters     int    `yaml:"consenters"`
 	KafkaBrokers   int    `yaml:"kafkaBrokers"`
 	ZookeeperNodes int    `yaml:"zookeeperNodes"`
 }
@@ -178,18 +178,13 @@ func loadConfig() *configuration {
 		os.Exit(1)
 	}
 
-	if config.OrdererNodes <= 0 {
-		fmt.Fprintln(os.Stderr, "Number of orderer nodes must be greater than 0")
-		os.Exit(1)
-	}
-
 	if config.Orderer.Type != "solo" && config.Orderer.Type != "kafka" {
 		fmt.Fprintln(os.Stderr, fmt.Sprintf("Unsupported orderer type %s", config.Orderer.Type))
 		os.Exit(1)
 	}
 
-	if config.Orderer.Type == "solo" && config.OrdererNodes != 1 {
-		fmt.Fprintln(os.Stderr, fmt.Sprintf("Only one orderer node must be specified if orderer type is %s", config.Orderer.Type))
+	if config.Orderer.Type == "kafka" && config.Orderer.Consenters <= 0 {
+		fmt.Fprintln(os.Stderr, fmt.Sprintf("A positive number of orderer nodes (consenters) is required if orderer type is %s", config.Orderer.Type))
 		os.Exit(1)
 	}
 
@@ -253,8 +248,12 @@ func main() {
 		Domain: config.Domain,
 	}
 
-	ordererList := make([]orderer, config.OrdererNodes)
-	for i := 0; i < config.OrdererNodes; i++ {
+	if config.Orderer.Consenters < 1 {
+		config.Orderer.Consenters = 1
+	}
+
+	ordererList := make([]orderer, config.Orderer.Consenters)
+	for i := 0; i < config.Orderer.Consenters; i++ {
 		ordererList[i] = orderer{
 			Name:         fmt.Sprintf("orderer%d.%s", i+1, ordererOrganization.Domain),
 			Organization: *ordererOrganization,
