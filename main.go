@@ -233,6 +233,10 @@ func main() {
 	os.MkdirAll(genesisPath, 0777)
 	os.MkdirAll(channelsPath, 0777)
 
+	if config.Orderer.Consenters < 1 {
+		config.Orderer.Consenters = 1
+	}
+
 	cryptoConfigTemplate := loadTemplate(config, "crypto-config-template.yaml")
 	execTemplateWithConfig(cryptoConfigTemplate, config, "crypto-config.yaml")
 
@@ -246,10 +250,6 @@ func main() {
 	ordererOrganization := &organization{
 		Name:   "ordererOrg",
 		Domain: config.Domain,
-	}
-
-	if config.Orderer.Consenters < 1 {
-		config.Orderer.Consenters = 1
 	}
 
 	ordererList := make([]orderer, config.Orderer.Consenters)
