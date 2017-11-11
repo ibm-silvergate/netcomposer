@@ -25,6 +25,11 @@ services:
       - KAFKA_BROKER_ID={{.ID}}
       - KAFKA_ZOOKEEPER_CONNECT={{range $.ZooKeeperNodes}}{{.Name}}:2181,{{end}}
       - KAFKA_DEFAULT_REPLICATION_FACTOR=1
+      - KAFKA_MIN_INSYNC_REPLICAS=1
+      - KAFKA_LOG_RETENTION_MS=-1
+      - KAFKA_MESSAGE_MAX_BYTES=103809024
+      - KAFKA_REPLICA_FETCH_MAX_BYTES=103809024
+      - KAFKA_UNCLEAN_LEADER_ELECTION_ENABLE=false
     ports:
       - 9092
     depends_on: {{range $.ZooKeeperNodes}}
