@@ -71,7 +71,7 @@ Organizations:
         ID: {{$.OrdererOrganization.Name}}MSP
 
         # MSPDir is the filesystem path which contains the MSP configuration
-        MSPDir: volumes/crypto-config/ordererOrganizations/{{$.OrdererOrganization.Domain}}/msp
+        MSPDir: volumes/crypto-config/ordererOrganizations/{{$.Domain}}/msp
 
     {{range $.PeerOrganizations}}
     - &{{.Name}}
@@ -80,7 +80,7 @@ Organizations:
         # ID to load the MSP definition as
         ID: {{.Name}}MSP
 
-        MSPDir: volumes/crypto-config/peerOrganizations/{{.Domain}}/msp
+        MSPDir: volumes/crypto-config/peerOrganizations/{{.FullName}}/msp
 
         AnchorPeers:
             # AnchorPeers defines the location of peers which can be used

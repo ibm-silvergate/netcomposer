@@ -78,6 +78,7 @@ type genInfo struct {
 	DBProvider          string
 	OrdererOrganization organization
 	Orderers            []orderer
+	CAs                 []ca
 	PeerOrganizations   []organization
 	Peers               []peer
 	LogLevel            string
@@ -85,8 +86,16 @@ type genInfo struct {
 }
 
 type organization struct {
-	Name   string
-	Domain string
+	Name     string
+	FullName string
+}
+
+type ca struct {
+	Name        string
+	FullName    string
+	OrgFullName string
+	ExposedPort int
+	Port        int
 }
 
 type orderer struct {
@@ -242,20 +251,25 @@ func main() {
 
 	generateCryptoMaterial(config, "crypto-config.yaml")
 
+	/* Fix naming from cryptogen tool
+	* Rename private key files ending in "_sk" to "secret.key" for easier configuration in templates
+	 */
+	filepath.Walk(filepath.Join(volumesPath, "crypto-config"), fixSKFilename)
+
 	copyChaincodes(config)
 
 	configTXTemplate := loadTemplate(config, "configtx-template.yaml")
 	dockerComposeTemplate := loadTemplate(config, "docker-compose-template.yaml")
 
 	ordererOrganization := &organization{
-		Name:   "ordererOrg",
-		Domain: config.Domain,
+		Name:     "ordererOrg",
+		FullName: fmt.Sprintf("ordererOrg.%s", config.Domain),
 	}
 
 	ordererList := make([]orderer, config.Orderer.Consenters)
 	for i := 0; i < config.Orderer.Consenters; i++ {
 		ordererList[i] = orderer{
-			Name:         fmt.Sprintf("orderer%d.%s", i+1, ordererOrganization.Domain),
+			Name:         fmt.Sprintf("orderer%d.%s", i+1, config.Domain),
 			Organization: *ordererOrganization,
 			ExposedPort:  7050 + 100*i,
 			Port:         7050,
@@ -263,12 +277,20 @@ func main() {
 	}
 
 	peerOrganizationList := make([]organization, config.PeerOrgs)
+	caList := make([]ca, config.PeerOrgs)
 	peerList := make([]peer, config.PeerOrgs*config.PeersPerOrg)
 
 	for i := 0; i < config.PeerOrgs; i++ {
 		peerOrganizationList[i] = organization{
-			Name:   fmt.Sprintf("org%d", i+1),
-			Domain: fmt.Sprintf("org%d.%s", i+1, config.Domain),
+			Name:     fmt.Sprintf("org%d", i+1),
+			FullName: fmt.Sprintf("org%d.%s", i+1, config.Domain),
+		}
+
+		caList[i] = ca{
+			Name:        fmt.Sprintf("ca.%s", peerOrganizationList[i].FullName),
+			OrgFullName: peerOrganizationList[i].FullName,
+			ExposedPort: 7054 + 100*i,
+			Port:        7054,
 		}
 
 		for j := 0; j < config.PeersPerOrg; j++ {
@@ -279,7 +301,7 @@ func main() {
 			eventHostPort := 7053 + 10*offset
 
 			peerdb := &peerdb{
-				Name:        fmt.Sprintf("peer%d.db.%s", j+1, peerOrganizationList[i].Domain),
+				Name:        fmt.Sprintf("peer%d.db.%s", j+1, peerOrganizationList[i].FullName),
 				Provider:    config.DB.Provider,
 				ExposedPort: dbPort,
 				Port:        config.DB.Port,
@@ -292,7 +314,7 @@ func main() {
 			}
 
 			peerList[i*config.PeersPerOrg+j] = peer{
-				Name:                fmt.Sprintf("peer%d.%s", j+1, peerOrganizationList[i].Domain),
+				Name:                fmt.Sprintf("peer%d.%s", j+1, peerOrganizationList[i].FullName),
 				Organization:        peerOrganizationList[i],
 				OrdererOrganization: *ordererOrganization,
 				ExposedPort:         peerHostPort,
@@ -325,12 +347,14 @@ func main() {
 		Arch:                config.Arch,
 		Version:             config.Version,
 		Name:                config.Network,
+		Domain:              config.Domain,
 		OrdererType:         config.Orderer.Type,
 		KafkaBrokers:        kafkaBrokerList,
 		ZooKeeperNodes:      zkNodeList,
 		DBProvider:          config.DB.Provider,
 		OrdererOrganization: *ordererOrganization,
 		Orderers:            ordererList,
+		CAs:                 caList,
 		PeerOrganizations:   peerOrganizationList,
 		Peers:               peerList,
 		LogLevel:            config.LogLevel,
@@ -353,6 +377,15 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Println("Success!")
+}
+
+func fixSKFilename(path string, f os.FileInfo, err error) (e error) {
+	if strings.HasSuffix(f.Name(), "_sk") {
+		dir := filepath.Dir(path)
+		newname := filepath.Join(dir, "secret.key")
+		os.Rename(path, newname)
+	}
+	return
 }
 
 func architecture() string {

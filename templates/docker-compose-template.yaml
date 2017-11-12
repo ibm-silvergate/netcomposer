@@ -62,17 +62,42 @@ services:
       - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/fabric/crypto-config/tls/server.key
       - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/fabric/crypto-config/tls/ca.crt]
       {{- end}}
+      {{- if eq $.OrdererType "kafka"}}
+      - ORDERER_KAFKA_RETRY_SHORTINTERVAL=1s
+      - ORDERER_KAFKA_RETRY_SHORTTOTAL=30s
+      - ORDERER_KAFKA_VERBOSE=true
+      {{- end}}
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric
     command: orderer
     volumes:
       - ./volumes/crypto-config/genesis/:/var/hyperledger/fabric/crypto-config/genesis/
-      - ./volumes/crypto-config/ordererOrganizations/{{.Organization.Domain}}/orderers/{{.Name}}/:/var/hyperledger/fabric/crypto-config/
+      - ./volumes/crypto-config/ordererOrganizations/{{$.Domain}}/orderers/{{.Name}}/:/var/hyperledger/fabric/crypto-config/
     ports:
       - {{.ExposedPort}}:{{.Port}}
     {{- if eq $.OrdererType "kafka"}}
     depends_on: {{range $.KafkaBrokers}}
       - {{.Name}}{{- end}}
     {{- end}}
+{{end}}
+
+{{- range .CAs}}
+  {{.Name}}:
+    container_name: {{.Name}}
+    image: {{$.DockerNS}}/fabric-ca:{{$.Arch}}-{{$.Version}}
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME={{.Name}}
+      - FABRIC_CA_TLS_ENABLED={{$.TLSEnabled}}
+      {{- if $.TLSEnabled}}
+      - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server/crypto-config/tlsca/tls{{.Name}}-cert.pem
+      - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server/crypto-config/tlsca/secret.key
+      {{- end}}
+    command: sh -c 'fabric-ca-server start --ca.certfile /etc/hyperledger/fabric-ca-server/crypto-config/ca/{{.Name}}-cert.pem --ca.keyfile /etc/hyperledger/fabric-ca-server/crypto-config/ca/secret.key -b admin:adminpw -d'
+    volumes:
+      - ./volumes/crypto-config/peerOrganizations/{{.OrgFullName}}/ca/:/etc/hyperledger/fabric-ca-server/crypto-config/ca/
+      - ./volumes/crypto-config/peerOrganizations/{{.OrgFullName}}/tlsca/:/etc/hyperledger/fabric-ca-server/crypto-config/tlsca/
+    ports:
+      - {{.ExposedPort}}:{{.Port}}
 {{end}}
 
 {{- range .Peers}}
@@ -83,7 +108,7 @@ services:
     image: {{$.DockerNS}}/fabric-couchdb:{{$.Arch}}-{{$.Version}}
     {{end -}}
     ports:
-    - {{.DB.ExposedPort}}:{{.DB.Port}}
+      - {{.DB.ExposedPort}}:{{.DB.Port}}
   {{- end}}
 
   {{.Name}}:
@@ -104,7 +129,7 @@ services:
         - CORE_PEER_ENDORSER_ENABLED=true
         - CORE_PEER_GOSSIP_EXTERNALENDPOINT={{.Name}}:{{.Port}}
         {{- if not (eq .Name (index $.Peers 0).Name)}}
-        - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.{{.Organization.Domain}}:{{(index $.Peers 0).Port}}
+        - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.{{.Organization.FullName}}:{{(index $.Peers 0).Port}}
         {{- end}}
         - CORE_PEER_GOSSIP_USELEADERELECTION=true
         - CORE_PEER_GOSSIP_ORGLEADER=false
@@ -125,7 +150,7 @@ services:
              /bin/bash
     volumes:
         - /var/run/:/host/var/run/
-        - ./volumes/crypto-config/peerOrganizations/{{.Organization.Domain}}/peers/{{.Name}}/:/etc/hyperledger/fabric/crypto-config/
+        - ./volumes/crypto-config/peerOrganizations/{{.Organization.FullName}}/peers/{{.Name}}/:/etc/hyperledger/fabric/crypto-config/
     ports:
       - {{.ExposedPort}}:{{.Port}}
       - {{.ExposedEventPort}}:{{.EventPort}}
@@ -153,15 +178,15 @@ services:
         - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/crypto-config/tls/ca.crt
         {{- end}}
         - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/crypto-config/msp
-        - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/crypto-config/users/Admin@{{.Organization.Domain}}/msp
-        - ORDERER_CA=/etc/hyperledger/fabric/crypto-config/orderer/msp/tlscacerts/tlsca.{{.OrdererOrganization.Domain}}-cert.pem
+        - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/crypto-config/users/Admin@{{.Organization.FullName}}/msp
+        - ORDERER_CA=/etc/hyperledger/fabric/crypto-config/orderer/msp/tlscacerts/tlsca.{{$.Domain}}-cert.pem
       working_dir: /opt/gopath/src/github.com/hyperledger/fabric
       command: /bin/bash
       volumes:
         - /var/run/:/host/var/run/
-        - ./volumes/crypto-config/peerOrganizations/{{.Organization.Domain}}/peers/{{.Name}}/:/etc/hyperledger/fabric/crypto-config/
-        - ./volumes/crypto-config/peerOrganizations/{{.Organization.Domain}}/users/:/etc/hyperledger/fabric/crypto-config/users/
-        - ./volumes/crypto-config/ordererOrganizations/{{.OrdererOrganization.Domain}}/orderers/{{(index $.Orderers 0).Name}}/:/etc/hyperledger/fabric/crypto-config/orderer/
+        - ./volumes/crypto-config/peerOrganizations/{{.Organization.FullName}}/peers/{{.Name}}/:/etc/hyperledger/fabric/crypto-config/
+        - ./volumes/crypto-config/peerOrganizations/{{.Organization.FullName}}/users/:/etc/hyperledger/fabric/crypto-config/users/
+        - ./volumes/crypto-config/ordererOrganizations/{{$.Domain}}/orderers/{{(index $.Orderers 0).Name}}/:/etc/hyperledger/fabric/crypto-config/orderer/
         - ./volumes/chaincodes/:/opt/gopath/src/github.com/hyperledger/fabric/chaincodes/
         - ./volumes/crypto-config/channel-artifacts/:/opt/gopath/src/github.com/hyperledger/fabric/channel-artifacts/
       depends_on:
