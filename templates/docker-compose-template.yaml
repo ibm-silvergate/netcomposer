@@ -87,12 +87,14 @@ services:
     environment:
       - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
       - FABRIC_CA_SERVER_CA_NAME={{.Name}}
+      - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server/crypto-config/ca/{{.Name}}-cert.pem
+      - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server/crypto-config/ca/secret.key
       - FABRIC_CA_TLS_ENABLED={{$.TLSEnabled}}
       {{- if $.TLSEnabled}}
       - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server/crypto-config/tlsca/tls{{.Name}}-cert.pem
       - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server/crypto-config/tlsca/secret.key
       {{- end}}
-    command: sh -c 'fabric-ca-server start --ca.certfile /etc/hyperledger/fabric-ca-server/crypto-config/ca/{{.Name}}-cert.pem --ca.keyfile /etc/hyperledger/fabric-ca-server/crypto-config/ca/secret.key -b admin:adminpw -d'
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
     volumes:
       - ./volumes/crypto-config/peerOrganizations/{{.OrgFullName}}/ca/:/etc/hyperledger/fabric-ca-server/crypto-config/ca/
       - ./volumes/crypto-config/peerOrganizations/{{.OrgFullName}}/tlsca/:/etc/hyperledger/fabric-ca-server/crypto-config/tlsca/
