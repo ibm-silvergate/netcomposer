@@ -25,6 +25,21 @@ peerOrganizations:      1
 peersPerOrganization:   1
 usersPerOrganization:   1
 
+channels:
+    - name: bigchannel
+
+    - name: org1channel
+      organizations:
+        - organization: 1
+
+#    - name: org2channel
+#      organizations:
+#        - organization: 2
+#          endorsers:
+#            - peer: 1
+#          committers:
+#            - peer: 2
+
 logLevel:       "debug"
 tlsEnabled:     true
 chaincodesPath: "./sample-chaincodes"

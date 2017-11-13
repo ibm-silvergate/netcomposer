@@ -46,15 +46,16 @@ Profiles:
             Organizations:
                 - *{{.OrdererOrganization.Name}}
         Consortiums:
-            {{.Name}}Consortium:
+            {{$.Name}}Consortium:
                 Organizations: {{range $.PeerOrganizations}}
                     - *{{.Name}}{{end}}
-    {{.Name}}Channel:
-        Consortium: {{.Name}}Consortium
-        Application:
-            Organizations: {{range $.PeerOrganizations}}
-                - *{{.Name}}{{end}}
-
+    {{range $.Channels}}
+    {{.Name}}:
+      Consortium: {{$.Name}}Consortium
+      Application:
+        Organizations: {{range .Organizations}}
+          - *{{.Name}}{{end}}
+    {{end}}
 ################################################################################
 #
 #   Section: Organizations

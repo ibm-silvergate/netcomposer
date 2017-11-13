@@ -41,20 +41,21 @@ const (
 )
 
 type configuration struct {
-	DockerNS       string      `yaml:"DOCKER_NS"`
-	Arch           string      `yaml:"ARCH"`
-	Version        string      `yaml:"VERSION"`
-	Network        string      `yaml:"network"`
-	Domain         string      `yaml:"domain"`
-	Description    string      `yaml:"description"`
-	Orderer        ordererSpec `yaml:"orderer"`
-	DB             dbSpec      `yaml:"db"`
-	PeerOrgs       int         `yaml:"peerOrganizations"`
-	PeersPerOrg    int         `yaml:"peersPerOrganization"`
-	PeerOrgUsers   int         `yaml:"usersPerOrganization"`
-	LogLevel       string      `yaml:"logLevel"`
-	TLSEnabled     bool        `yaml:"tlsEnabled"`
-	ChaincodesPath string      `yaml:"chaincodesPath"`
+	DockerNS       string        `yaml:"DOCKER_NS"`
+	Arch           string        `yaml:"ARCH"`
+	Version        string        `yaml:"VERSION"`
+	Network        string        `yaml:"network"`
+	Domain         string        `yaml:"domain"`
+	Description    string        `yaml:"description"`
+	Orderer        ordererSpec   `yaml:"orderer"`
+	DB             dbSpec        `yaml:"db"`
+	PeerOrgs       int           `yaml:"peerOrganizations"`
+	PeersPerOrg    int           `yaml:"peersPerOrganization"`
+	PeerOrgUsers   int           `yaml:"usersPerOrganization"`
+	Channels       []channelSpec `yaml:"channels"`
+	LogLevel       string        `yaml:"logLevel"`
+	TLSEnabled     bool          `yaml:"tlsEnabled"`
+	ChaincodesPath string        `yaml:"chaincodesPath"`
 }
 
 type ordererSpec struct {
@@ -62,6 +63,21 @@ type ordererSpec struct {
 	Consenters     int    `yaml:"consenters"`
 	KafkaBrokers   int    `yaml:"kafkaBrokers"`
 	ZookeeperNodes int    `yaml:"zookeeperNodes"`
+}
+
+type channelSpec struct {
+	Name          string           `yaml:"name"`
+	Organizations []channelOrgSpec `yaml:"organizations"`
+}
+
+type channelOrgSpec struct {
+	ID         int              `yaml:"organization"`
+	Endorsers  []peerRelativeID `yaml:"endorsers"`
+	Committers []peerRelativeID `yaml:"committers"`
+}
+
+type peerRelativeID struct {
+	ID int `yaml:"peer"`
 }
 
 type dbSpec struct {
@@ -91,6 +107,7 @@ type genInfo struct {
 	Orderers            []orderer
 	CAs                 []ca
 	PeerOrganizations   []organization
+	Channels            []channel
 	Peers               []peer
 	LogLevel            string
 	TLSEnabled          bool
@@ -99,6 +116,18 @@ type genInfo struct {
 type organization struct {
 	Name     string
 	FullName string
+	Peers    []peer
+}
+
+type channel struct {
+	Name          string
+	Organizations []channelOrg
+}
+
+type channelOrg struct {
+	Name       string
+	Endorsers  []string
+	Committers []string
 }
 
 type ca struct {
@@ -308,6 +337,7 @@ func main() {
 		peerOrganizationList[i] = organization{
 			Name:     fmt.Sprintf("org%d", i+1),
 			FullName: fmt.Sprintf("org%d.%s", i+1, config.Domain),
+			Peers:    make([]peer, config.PeersPerOrg),
 		}
 
 		caList[i] = ca{
@@ -337,7 +367,7 @@ func main() {
 				DB:          config.DB.DB,
 			}
 
-			peerList[i*config.PeersPerOrg+j] = peer{
+			peer := peer{
 				Name:                fmt.Sprintf("peer%d.%s", j+1, peerOrganizationList[i].FullName),
 				Organization:        peerOrganizationList[i],
 				OrdererOrganization: *ordererOrganization,
@@ -347,6 +377,9 @@ func main() {
 				EventPort:           7053,
 				DB:                  *peerdb,
 			}
+
+			peerOrganizationList[i].Peers[j] = peer
+			peerList[i*config.PeersPerOrg+j] = peer
 		}
 	}
 
@@ -366,6 +399,63 @@ func main() {
 		}
 	}
 
+	channelList := make([]channel, len(config.Channels))
+	for i, chSpec := range config.Channels {
+		//DEFAULT: when no organizations are specified for the channel, it means all organizations
+		if chSpec.Organizations == nil || len(chSpec.Organizations) == 0 {
+			chSpec.Organizations = make([]channelOrgSpec, len(peerOrganizationList))
+			for i := 0; i < len(peerOrganizationList); i++ {
+				chSpec.Organizations[i] = channelOrgSpec{ID: i + 1}
+			}
+		}
+
+		chOrgList := make([]channelOrg, len(chSpec.Organizations))
+		for j, chOrgSpec := range chSpec.Organizations {
+			if chOrgSpec.ID < 1 || chOrgSpec.ID > len(peerOrganizationList) {
+				panic(fmt.Sprintf("Invalid organization ID (%d) specified for channel %s", chOrgSpec.ID, chSpec.Name))
+			}
+
+			chOrgList[j] = channelOrg{Name: peerOrganizationList[chOrgSpec.ID-1].Name}
+
+			orgPeers := peerOrganizationList[chOrgSpec.ID-1].Peers
+
+			//DEFAULT: specify all peers as endorsers if no peer was specified as endorser nor committer
+			if (chOrgSpec.Endorsers == nil || len(chOrgSpec.Endorsers) == 0) &&
+				(chOrgSpec.Committers == nil || len(chOrgSpec.Committers) == 0) {
+
+				chOrgSpec.Endorsers = make([]peerRelativeID, len(orgPeers))
+				for p := 0; p < len(orgPeers); p++ {
+					chOrgSpec.Endorsers[p] = peerRelativeID{ID: p + 1}
+				}
+			}
+
+			//Assign endorser names
+			if chOrgSpec.Endorsers != nil {
+				chOrgList[j].Endorsers = make([]string, len(chOrgSpec.Endorsers))
+
+				for p, peerRelID := range chOrgSpec.Endorsers {
+					if peerRelID.ID < 1 || peerRelID.ID > len(orgPeers) {
+						panic(fmt.Sprintf("Invalid peer ID (%d) specified for channel %s", peerRelID.ID, chSpec.Name))
+					}
+					chOrgList[j].Endorsers[p] = orgPeers[peerRelID.ID-1].Name
+				}
+			}
+			//Assign committer names
+			if chOrgSpec.Committers != nil {
+				chOrgList[j].Committers = make([]string, len(chOrgSpec.Committers))
+
+				for p, peerRelID := range chOrgSpec.Committers {
+					if peerRelID.ID < 1 || peerRelID.ID > len(orgPeers) {
+						panic(fmt.Sprintf("Invalid peer ID (%d) specified for channel %s", peerRelID.ID, chSpec.Name))
+					}
+					chOrgList[j].Committers[p] = orgPeers[peerRelID.ID-1].Name
+				}
+			}
+		}
+
+		channelList[i] = channel{Name: chSpec.Name, Organizations: chOrgList}
+	}
+
 	genInfo := &genInfo{
 		DockerNS:            config.DockerNS,
 		Arch:                config.Arch,
@@ -382,6 +472,7 @@ func main() {
 		CAs:                 caList,
 		PeerOrganizations:   peerOrganizationList,
 		Peers:               peerList,
+		Channels:            channelList,
 		LogLevel:            config.LogLevel,
 		TLSEnabled:          config.TLSEnabled,
 	}
@@ -391,7 +482,10 @@ func main() {
 
 	generateGenesisBlock(config, genesisPath, "genesis.block")
 
-	generateChannelConfig(config, channelsPath, "bigchannel.tx")
+	//Generate channels files
+	for _, ch := range genInfo.Channels {
+		generateChannelConfig(config, channelsPath, ch.Name)
+	}
 
 	fmt.Print("> Generating script to pull fabric docker images... ")
 	pullImagesTemplate := loadTemplate(config, "pull-docker-images-template.yaml")
@@ -466,13 +560,13 @@ func generateGenesisBlock(config *configuration, genesisPath, genesisFile string
 	fmt.Println("Success!")
 }
 
-func generateChannelConfig(config *configuration, channelsPath, channelFile string) {
-	fmt.Print("> Generating global channel config...")
+func generateChannelConfig(config *configuration, channelsPath, channelName string) {
+	fmt.Printf("> Generating config for channel %s", channelName)
 
 	args := []string{
-		"-profile", config.Network + "Channel",
-		"-outputCreateChannelTx", filepath.Join(channelsPath, channelFile),
-		"-channelID", "bigchannel",
+		"-profile", channelName,
+		"-outputCreateChannelTx", filepath.Join(channelsPath, fmt.Sprintf("%s.tx", channelName)),
+		"-channelID", channelName,
 	}
 
 	cmd := exec.Command(fmt.Sprintf("./tools/%s/configtxgen", architecture()), args...)

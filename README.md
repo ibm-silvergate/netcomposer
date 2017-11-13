@@ -26,9 +26,12 @@ The tool takes as input a config file specifying the network components:
     db:
         provider: "goleveldb"
 
-    peerOrganizations:      1
-    peersPerOrganization:   2
-    usersPerOrganization:   1
+    peerOrganizations:    1
+    peersPerOrganization: 2
+    usersPerOrganization: 1
+
+    channels:
+      - name: bigchannel
 
     logLevel:       "debug"
     tlsEnabled:     true
