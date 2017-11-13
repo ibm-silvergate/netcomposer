@@ -37,6 +37,7 @@ type configuration struct {
 	Version        string      `yaml:"VERSION"`
 	Network        string      `yaml:"network"`
 	Domain         string      `yaml:"domain"`
+	Description    string      `yaml:"description"`
 	Orderer        ordererSpec `yaml:"orderer"`
 	DB             dbSpec      `yaml:"db"`
 	PeerOrgs       int         `yaml:"peerOrganizations"`
@@ -72,6 +73,7 @@ type genInfo struct {
 	Version             string
 	Name                string
 	Domain              string
+	Description         string
 	OrdererType         string
 	KafkaBrokers        []kafkaBroker
 	ZooKeeperNodes      []zkNode
@@ -348,6 +350,7 @@ func main() {
 		Version:             config.Version,
 		Name:                config.Network,
 		Domain:              config.Domain,
+		Description:         config.Description,
 		OrdererType:         config.Orderer.Type,
 		KafkaBrokers:        kafkaBrokerList,
 		ZooKeeperNodes:      zkNodeList,
