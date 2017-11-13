@@ -1,0 +1,26 @@
+#
+# The network connection profile provides client applications the information about the target
+# blockchain network that are necessary for the applications to interact with it. These are all
+# knowledge that must be acquired from out-of-band sources. This file provides such a source.
+#
+name: "{{.Network}}-{{.Organization}}"
+
+x-type: "hlfv1"
+
+description: "{{.Description}} - client definition for {{.Organization}}"
+
+version: "1.0"
+
+#
+# Client section for the node.js SDK
+#
+client:
+  organization: {{.Organization}}
+
+  credentialStore:
+    path: "./fabric-client-kv-{{.Organization}}"
+
+    cryptoStore:
+      path: "/tmp/fabric-client-kv-{{.Organization}}"
+
+wallet: wallet-{{.Organization}}

@@ -1,0 +1,108 @@
+#
+# The network connection profile provides client applications the information about the target
+# blockchain network that are necessary for the applications to interact with it. These are all
+# knowledge that must be acquired from out-of-band sources. This file provides such a source.
+#
+name: "{{$.Name}}"
+
+x-type: "hlfv1"
+
+description: "{{.Description}}"
+
+version: "1.0"
+
+#
+# The client section will be added on a per org basis
+#
+#client:
+
+channels:
+  {{range $.Channels -}}
+  {{.Name}}:
+    orderers: {{range $.Orderers}}
+      - {{.Name}}
+    {{end -}}
+
+    peers: {{range .Organizations}}{{range .Peers}}
+      {{.Name}}:
+        endorsingPeer: {{.Endorser}}
+        chaincodeQuery: {{.QueryChaincode}}
+        ledgerQuery: {{.QueryLedger}}
+        eventSource: {{.EventSource}}
+      {{end}}{{end}}
+    
+    chaincodes:
+    #  - mycc:v0
+  {{end}}
+#
+# List of participating organizations in this network
+#
+organizations: {{range $.PeerOrganizations}}
+  {{.Name}}:
+    mspid: {{.Name}}MSP
+
+    peers: {{range .Peers}}
+      - {{.Name}} {{end}}
+
+    certificateAuthorities:
+      - ca.{{.FullName}}
+
+    adminPrivateKey:
+      path: crypto-config/peerOrganizations/{{.FullName}}/users/Admin@{{.FullName}}/msp/keystore/secret.key
+    signedCert:
+      path: crypto-config/peerOrganizations/{{.FullName}}/users/Admin@{{.FullName}}/msp/signcerts/Admin@{{.FullName}}-cert.pem
+{{end}}
+#
+# List of orderers to send transaction and channel create/update requests to.
+#
+orderers: {{range $.Orderers}}
+  {{.Name}}:
+    url: grpcs://localhost:{{.ExposedPort}}
+
+    # these are standard properties defined by the gRPC library
+    # they will be passed in as-is to gRPC client constructor
+    grpcOptions:
+      ssl-target-name-override: {{.Name}}
+      grpc-max-send-message-length: 15
+
+    tlsCACerts:
+      path: crypto-config/ordererOrganizations/{{$.Domain}}/orderers/{{.Name}}/tls/ca.crt
+{{end}}
+#
+# List of peers to send various requests to, including endorsement, query
+# and event listener registration.
+#
+peers: {{range $.Peers}}
+  {{.Name}}:
+    # this URL is used to send endorsement and query requests
+    url: grpcs://localhost:{{.ExposedPort}}
+
+    # this URL is used to connect the EventHub and registering event listeners
+    eventUrl: grpcs://localhost:{{.ExposedEventPort}}
+
+    grpcOptions:
+      ssl-target-name-override: {{.Name}}
+    tlsCACerts:
+      path: crypto-config/peerOrganizations/{{.Organization.FullName}}/peers/{{.Name}}/tls/ca.crt
+{{end}}
+#
+# Fabric-CA Certificate Authority provided by Hyperledger Fabric
+#
+certificateAuthorities: {{range $.CAs}}
+  {{.Name}}:
+    url: https://localhost:{{.ExposedPort}}
+    # the properties specified under this object are passed to the 'http' client verbatim when
+    # making the request to the Fabric-CA server
+    httpOptions:
+      verify: false
+    tlsCACerts:
+      path: crypto-config/peerOrganizations/{{.OrgFullName}}/ca/{{.Name}}-cert.pem
+
+    # Fabric-CA supports dynamic user enrollment via REST APIs. A "root" user, a.k.a registrar, is
+    # needed to enroll and invoke new users.
+    registrar:
+      - enrollId: admin
+        enrollSecret: adminpw
+    # [Optional] The optional name of the CA.
+    caName: {{.Name}}
+{{end}}

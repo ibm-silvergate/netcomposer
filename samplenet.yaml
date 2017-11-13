@@ -28,17 +28,21 @@ usersPerOrganization:   1
 channels:
     - name: bigchannel
 
-    - name: org1channel
-      organizations:
-        - organization: 1
+#    - name: org1channel
+#      organizations:
+#        - organization: 1
 
 #    - name: org2channel
 #      organizations:
 #        - organization: 2
-#          endorsers:
+#          peers:
 #            - peer: 1
-#          committers:
+#              endorser: true
+#              queryChaincode: true
+#              queryLedger: true
+#              eventSource: true
 #            - peer: 2
+#              endorser: false
 
 logLevel:       "debug"
 tlsEnabled:     true

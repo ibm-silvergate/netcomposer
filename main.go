@@ -71,13 +71,16 @@ type channelSpec struct {
 }
 
 type channelOrgSpec struct {
-	ID         int              `yaml:"organization"`
-	Endorsers  []peerRelativeID `yaml:"endorsers"`
-	Committers []peerRelativeID `yaml:"committers"`
+	ID    int               `yaml:"organization"`
+	Peers []channelPeerSpec `yaml:"peers"`
 }
 
-type peerRelativeID struct {
-	ID int `yaml:"peer"`
+type channelPeerSpec struct {
+	ID             int  `yaml:"peer"`
+	Endorser       bool `yaml:"endorser"`
+	QueryChaincode bool `yaml:"queryChaincode"`
+	QueryLedger    bool `yaml:"queryLedger"`
+	EventSource    bool `yaml:"eventSource"`
 }
 
 type dbSpec struct {
@@ -125,9 +128,16 @@ type channel struct {
 }
 
 type channelOrg struct {
-	Name       string
-	Endorsers  []string
-	Committers []string
+	Name  string
+	Peers []channelPeer
+}
+
+type channelPeer struct {
+	Name           string
+	Endorser       bool
+	QueryChaincode bool
+	QueryLedger    bool
+	EventSource    bool
 }
 
 type ca struct {
@@ -299,21 +309,6 @@ func main() {
 		}
 	}
 
-	cryptoConfigTemplate := loadTemplate(config, "crypto-config-template.yaml")
-	execTemplateWithConfig(cryptoConfigTemplate, config, "crypto-config.yaml")
-
-	generateCryptoMaterial(config, "crypto-config.yaml")
-
-	/* Fix naming from cryptogen tool
-	* Rename private key files ending in "_sk" to "secret.key" for easier configuration in templates
-	 */
-	filepath.Walk(filepath.Join(volumesPath, "crypto-config"), fixSKFilename)
-
-	copyChaincodes(config)
-
-	configTXTemplate := loadTemplate(config, "configtx-template.yaml")
-	dockerComposeTemplate := loadTemplate(config, "docker-compose-template.yaml")
-
 	ordererOrganization := &organization{
 		Name:     "ordererOrg",
 		FullName: fmt.Sprintf("ordererOrg.%s", config.Domain),
@@ -419,36 +414,36 @@ func main() {
 
 			orgPeers := peerOrganizationList[chOrgSpec.ID-1].Peers
 
-			//DEFAULT: specify all peers as endorsers if no peer was specified as endorser nor committer
-			if (chOrgSpec.Endorsers == nil || len(chOrgSpec.Endorsers) == 0) &&
-				(chOrgSpec.Committers == nil || len(chOrgSpec.Committers) == 0) {
-
-				chOrgSpec.Endorsers = make([]peerRelativeID, len(orgPeers))
+			//DEFAULT: specify all peers as endorsers if no peer was specified
+			if chOrgSpec.Peers == nil || len(chOrgSpec.Peers) == 0 {
+				chOrgSpec.Peers = make([]channelPeerSpec, len(orgPeers))
 				for p := 0; p < len(orgPeers); p++ {
-					chOrgSpec.Endorsers[p] = peerRelativeID{ID: p + 1}
+					chOrgSpec.Peers[p] = channelPeerSpec{
+						ID:             p + 1,
+						Endorser:       true,
+						QueryChaincode: true,
+						QueryLedger:    true,
+						EventSource:    true,
+					}
 				}
 			}
 
-			//Assign endorser names
-			if chOrgSpec.Endorsers != nil {
-				chOrgList[j].Endorsers = make([]string, len(chOrgSpec.Endorsers))
+			//Assign peer names
+			if chOrgSpec.Peers != nil {
+				chOrgList[j].Peers = make([]channelPeer, len(chOrgSpec.Peers))
 
-				for p, peerRelID := range chOrgSpec.Endorsers {
-					if peerRelID.ID < 1 || peerRelID.ID > len(orgPeers) {
-						panic(fmt.Sprintf("Invalid peer ID (%d) specified for channel %s", peerRelID.ID, chSpec.Name))
+				for p, chPeerSpec := range chOrgSpec.Peers {
+					if chPeerSpec.ID < 1 || chPeerSpec.ID > len(orgPeers) {
+						panic(fmt.Sprintf("Invalid peer ID (%d) specified for channel %s", chPeerSpec.ID, chSpec.Name))
 					}
-					chOrgList[j].Endorsers[p] = orgPeers[peerRelID.ID-1].Name
-				}
-			}
-			//Assign committer names
-			if chOrgSpec.Committers != nil {
-				chOrgList[j].Committers = make([]string, len(chOrgSpec.Committers))
+					chOrgList[j].Peers[p] = channelPeer{
+						Name:           orgPeers[chPeerSpec.ID-1].Name,
+						Endorser:       chPeerSpec.Endorser,
+						QueryChaincode: chPeerSpec.QueryChaincode,
+						QueryLedger:    chPeerSpec.QueryLedger,
+						EventSource:    chPeerSpec.EventSource,
+					}
 
-				for p, peerRelID := range chOrgSpec.Committers {
-					if peerRelID.ID < 1 || peerRelID.ID > len(orgPeers) {
-						panic(fmt.Sprintf("Invalid peer ID (%d) specified for channel %s", peerRelID.ID, chSpec.Name))
-					}
-					chOrgList[j].Committers[p] = orgPeers[peerRelID.ID-1].Name
 				}
 			}
 		}
@@ -477,25 +472,89 @@ func main() {
 		TLSEnabled:          config.TLSEnabled,
 	}
 
-	execTemplate(configTXTemplate, genInfo, config, "configtx.yaml")
-	execTemplate(dockerComposeTemplate, genInfo, config, "docker-compose.yaml")
+	copyChaincodes(config)
 
-	generateGenesisBlock(config, genesisPath, "genesis.block")
+	generateCryptoConfigFile(config)
 
-	//Generate channels files
-	for _, ch := range genInfo.Channels {
-		generateChannelConfig(config, channelsPath, ch.Name)
+	generateCryptoMaterial(genInfo, "crypto-config.yaml")
+	/* Fix naming from cryptogen tool
+	* Rename private key files ending in "_sk" to "secret.key" for easier configuration in templates
+	 */
+	filepath.Walk(filepath.Join(volumesPath, "crypto-config"), fixSKFilename)
+
+	generateConfigTXFile(genInfo)
+
+	generateDockerComposeFile(genInfo)
+
+	generatePullImagesScriptFile(genInfo)
+
+	generateNetworkConfigFile(genInfo)
+
+	generateNetworkConfigForOrgs(genInfo)
+
+	generateGenesisBlock(genesisPath, "genesis.block")
+
+	generateChannelConfig(genInfo, channelsPath)
+}
+
+func generateCryptoConfigFile(config *configuration) {
+	fmt.Print("Generating crypto config file: ")
+	cryptoConfigTemplate := loadTemplate("crypto-config-template.yaml")
+	execTemplate(cryptoConfigTemplate, config.Network, config, "crypto-config.yaml")
+	fmt.Println("SUCCEED")
+}
+
+func generateConfigTXFile(genInfo *genInfo) {
+	fmt.Print("Generating configTX file: ")
+	configTXTemplate := loadTemplate("configtx-template.yaml")
+	execTemplate(configTXTemplate, genInfo.Name, genInfo, "configtx.yaml")
+	fmt.Println("SUCCEED")
+}
+
+func generateDockerComposeFile(genInfo *genInfo) {
+	fmt.Print("Generating docker compose file: ")
+	dockerComposeTemplate := loadTemplate("docker-compose-template.yaml")
+	execTemplate(dockerComposeTemplate, genInfo.Name, genInfo, "docker-compose.yaml")
+	fmt.Println("SUCCEED")
+}
+
+func generateNetworkConfigFile(genInfo *genInfo) {
+	fmt.Print("Generating network config file: ")
+	networkConfigTemplate := loadTemplate("network-config-template.yaml")
+	execTemplate(networkConfigTemplate, genInfo.Name, genInfo, "network-config.yaml")
+	fmt.Println("SUCCEED")
+}
+
+func generateNetworkConfigForOrgs(genInfo *genInfo) {
+	networkConfigTemplate := loadTemplate("network-config-org-template.yaml")
+
+	for _, org := range genInfo.PeerOrganizations {
+		fmt.Printf("Generating network config for organization %s: ", org.Name)
+		genInfoClientDef := struct {
+			Network      string
+			Description  string
+			Organization string
+		}{
+			Network:      genInfo.Name,
+			Description:  genInfo.Description,
+			Organization: org.Name,
+		}
+
+		execTemplate(networkConfigTemplate, genInfo.Name, genInfoClientDef, fmt.Sprintf("network-config-%s.yaml", org.Name))
+		fmt.Println("SUCCEED")
 	}
+}
 
-	fmt.Print("> Generating script to pull fabric docker images... ")
-	pullImagesTemplate := loadTemplate(config, "pull-docker-images-template.yaml")
-	execTemplateWithConfig(pullImagesTemplate, config, "pull-docker-images.sh")
-	args := []string{"+x", filepath.Join(config.Network, "pull-docker-images.sh")}
+func generatePullImagesScriptFile(genInfo *genInfo) {
+	fmt.Print("Generating script to pull fabric docker images: ")
+	pullImagesTemplate := loadTemplate("pull-docker-images-template.yaml")
+	execTemplate(pullImagesTemplate, genInfo.Name, genInfo, "pull-docker-images.sh")
+	args := []string{"+x", filepath.Join(genInfo.Name, "pull-docker-images.sh")}
 	if err := exec.Command("chmod", args...).Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	fmt.Println("Success!")
+	fmt.Println("SUCCEED")
 }
 
 func fixSKFilename(path string, f os.FileInfo, err error) (e error) {
@@ -519,9 +578,9 @@ func architecture() string {
 	return strings.ToLower(fmt.Sprintf("%s", sarch)) + "-amd64"
 }
 
-func generateCryptoMaterial(config *configuration, cryptoConfigFile string) {
-	fmt.Print("> Generating crypto material...")
-	cryptoConfigFilePath := filepath.Join(config.Network, cryptoConfigFile)
+func generateCryptoMaterial(genInfo *genInfo, cryptoConfigFile string) {
+	fmt.Print("Generating crypto material: ")
+	cryptoConfigFilePath := filepath.Join(genInfo.Name, cryptoConfigFile)
 
 	args := []string{
 		"generate",
@@ -533,11 +592,11 @@ func generateCryptoMaterial(config *configuration, cryptoConfigFile string) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	fmt.Println("Success!")
+	fmt.Println("SUCCEED")
 }
 
-func generateGenesisBlock(config *configuration, genesisPath, genesisFile string) {
-	fmt.Print("> Generating genesis block...")
+func generateGenesisBlock(genesisPath, genesisFile string) {
+	fmt.Print("Generating genesis block: ")
 
 	args := []string{
 		"-profile", config.Network + "Genesis",
@@ -557,41 +616,43 @@ func generateGenesisBlock(config *configuration, genesisPath, genesisFile string
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	fmt.Println("Success!")
+	fmt.Println("SUCCEED")
 }
 
-func generateChannelConfig(config *configuration, channelsPath, channelName string) {
-	fmt.Printf("> Generating config for channel %s", channelName)
+func generateChannelConfig(genInfo *genInfo, channelsPath string) {
+	for _, ch := range genInfo.Channels {
+		fmt.Printf("Generating config for channel %s: ", ch.Name)
 
-	args := []string{
-		"-profile", channelName,
-		"-outputCreateChannelTx", filepath.Join(channelsPath, fmt.Sprintf("%s.tx", channelName)),
-		"-channelID", channelName,
-	}
+		args := []string{
+			"-profile", ch.Name,
+			"-outputCreateChannelTx", filepath.Join(channelsPath, fmt.Sprintf("%s.tx", ch.Name)),
+			"-channelID", ch.Name,
+		}
 
-	cmd := exec.Command(fmt.Sprintf("./tools/%s/configtxgen", architecture()), args...)
-	cmd.Env = os.Environ()
-	pwd, err := os.Getwd()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	cmd.Env = append(cmd.Env, fmt.Sprintf("FABRIC_CFG_PATH=%s", filepath.Join(pwd, config.Network)))
+		cmd := exec.Command(fmt.Sprintf("./tools/%s/configtxgen", architecture()), args...)
+		cmd.Env = os.Environ()
+		pwd, err := os.Getwd()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		cmd.Env = append(cmd.Env, fmt.Sprintf("FABRIC_CFG_PATH=%s", filepath.Join(pwd, config.Network)))
 
-	if err := cmd.Run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Println("SUCCEED")
 	}
-	fmt.Println("Success!")
 }
 
 func copyChaincodes(config *configuration) {
 	if config.ChaincodesPath != "" {
-		fmt.Print("> Copying chaincodes to volumes...")
+		fmt.Print("Copying chaincodes to volumes: ")
 		copyFolder(config.ChaincodesPath, filepath.Join(config.Network, "volumes/chaincodes"))
-		fmt.Println("Success!")
+		fmt.Println("SUCCEED")
 	} else {
-		fmt.Println("> Chaincodes path was not specified, no chaincode will be included into peer containers")
+		fmt.Println("Chaincodes path was not specified, no chaincode will be included into peer containers")
 	}
 }
 
@@ -603,7 +664,7 @@ func copyFolder(sPath, dPath string) {
 	}
 }
 
-func loadTemplate(config *configuration, templateFile string) *template.Template {
+func loadTemplate(templateFile string) *template.Template {
 	templateFilePath := path.Join("templates", templateFile)
 
 	fm := template.FuncMap{
@@ -634,30 +695,10 @@ func inc(val int) int {
 	return val + 1
 }
 
-func execTemplate(t *template.Template, gi *genInfo, c *configuration, targetFile string) error {
-	os.MkdirAll(c.Network, 0777)
+func execTemplate(t *template.Template, network string, genInfo interface{}, targetFile string) error {
+	os.MkdirAll(network, 0777)
 
-	path := filepath.Join(c.Network, targetFile)
-
-	f, e := os.Create(path)
-	if e != nil {
-		log.Println("Error creating file: ", e)
-		return e
-	}
-
-	e = t.Execute(f, gi)
-	if e != nil {
-		log.Println("Error executing template: ", e)
-		return e
-	}
-
-	return nil
-}
-
-func execTemplateWithConfig(t *template.Template, c *configuration, targetFile string) error {
-	os.MkdirAll(c.Network, 0777)
-
-	path := filepath.Join(c.Network, targetFile)
+	path := filepath.Join(network, targetFile)
 
 	f, e := os.Create(path)
 	if e != nil {
@@ -665,7 +706,7 @@ func execTemplateWithConfig(t *template.Template, c *configuration, targetFile s
 		return e
 	}
 
-	e = t.Execute(f, c)
+	e = t.Execute(f, genInfo)
 	if e != nil {
 		log.Println("Error executing template: ", e)
 		return e
