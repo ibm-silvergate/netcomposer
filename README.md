@@ -14,16 +14,17 @@ The tool takes as input a config file specifying the network components:
 
     DOCKER_NS: hyperledger
     ARCH: x86_64
-    VERSION: 1.0.2
+    VERSION: 1.1.0-preview
 
-    network:                "samplenet"
-    domain:                 "samplenet.com"
+    network:     "samplenet"
+    domain:      "samplenet.com"
+    description: "a Fabric network bootstrapped with netcomposer"
 
     orderer:
         type: "solo"
 
     db:
-        provider:   "goleveldb"
+        provider: "goleveldb"
 
     peerOrganizations:      1
     peersPerOrganization:   2
@@ -44,9 +45,11 @@ The tool takes as input a config file specifying the network components:
 
 #### 1. Running the tool
 
-    Using the binaries for your platform (download from release folder): net-composer -config samplenet.yaml
+    - Using the binaries for your platform (download from release folder)
+    net-composer -config samplenet.yaml
 
-    Running the tool without binaries: go run main.go -config samplenet.yaml
+    - Running the tool without binaries
+    go run main.go -config samplenet.yaml
 
 #### 2. Start the network
 

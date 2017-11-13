@@ -20,8 +20,6 @@ db:
 
 #db:
 #    provider: "CouchDB"
-#    port: 5984
-#    hostPort: 5984
 
 peerOrganizations:      1
 peersPerOrganization:   1

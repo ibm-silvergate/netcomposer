@@ -31,6 +31,15 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+//Constants used to identify DBProvider and Ordering Service
+const (
+	DBProviderGoLevelDB string = "goleveldb"
+	DBProviderCouchDB   string = "CouchDB"
+
+	OrderingServiceSOLO  string = "solo"
+	OrderingServiceKafKa string = "kafka"
+)
+
 type configuration struct {
 	DockerNS       string      `yaml:"DOCKER_NS"`
 	Arch           string      `yaml:"ARCH"`
@@ -189,27 +198,27 @@ func loadConfig() *configuration {
 		os.Exit(1)
 	}
 
-	if config.Orderer.Type != "solo" && config.Orderer.Type != "kafka" {
+	if config.Orderer.Type != OrderingServiceSOLO && config.Orderer.Type != OrderingServiceKafKa {
 		fmt.Fprintln(os.Stderr, fmt.Sprintf("Unsupported orderer type %s", config.Orderer.Type))
 		os.Exit(1)
 	}
 
-	if config.Orderer.Type == "kafka" && config.Orderer.Consenters <= 0 {
+	if config.Orderer.Type == OrderingServiceKafKa && config.Orderer.Consenters <= 0 {
 		fmt.Fprintln(os.Stderr, fmt.Sprintf("A positive number of orderer nodes (consenters) is required if orderer type is %s", config.Orderer.Type))
 		os.Exit(1)
 	}
 
-	if config.Orderer.Type == "kafka" && config.Orderer.KafkaBrokers < 1 {
+	if config.Orderer.Type == OrderingServiceKafKa && config.Orderer.KafkaBrokers < 1 {
 		fmt.Fprintln(os.Stderr, fmt.Sprintf("A positive number of brokers is required if orderer type is %s", config.Orderer.Type))
 		os.Exit(1)
 	}
 
-	if config.Orderer.Type == "kafka" && config.Orderer.ZookeeperNodes < 1 {
+	if config.Orderer.Type == OrderingServiceKafKa && config.Orderer.ZookeeperNodes < 1 {
 		fmt.Fprintln(os.Stderr, fmt.Sprintf("A positive number of zookeeper nodes is required if orderer type is %s", config.Orderer.Type))
 		os.Exit(1)
 	}
 
-	if config.DB.Provider != "goleveldb" && config.DB.Provider != "CouchDB" {
+	if config.DB.Provider != DBProviderGoLevelDB && config.DB.Provider != DBProviderCouchDB {
 		fmt.Fprintln(os.Stderr, fmt.Sprintf("Unsupported db provider  %s", config.DB.Provider))
 		os.Exit(1)
 	}
@@ -244,8 +253,21 @@ func main() {
 	os.MkdirAll(genesisPath, 0777)
 	os.MkdirAll(channelsPath, 0777)
 
+	/* This step is required when using SOLO ordering service
+	 * Consenters field is optional is such case
+	 */
 	if config.Orderer.Consenters < 1 {
 		config.Orderer.Consenters = 1
+	}
+
+	// Set default ports for CouchDB when not specified in config file
+	if config.DB.Provider == DBProviderCouchDB {
+		if config.DB.Port == 0 {
+			config.DB.Port = 5984
+		}
+		if config.DB.HostPort == 0 {
+			config.DB.HostPort = 5984
+		}
 	}
 
 	cryptoConfigTemplate := loadTemplate(config, "crypto-config-template.yaml")
