@@ -13,8 +13,8 @@ The tool takes as input a config file specifying the network components:
 ```yaml
 
     DOCKER_NS: hyperledger
-    ARCH: x86_64
-    VERSION: 1.1.0-preview
+    ARCH:      x86_64
+    VERSION:   1.1.0-preview
 
     network:     "samplenet"
     domain:      "samplenet.com"
@@ -30,9 +30,9 @@ The tool takes as input a config file specifying the network components:
     peersPerOrganization:   2
     usersPerOrganization:   1
 
-    logLevel:               "debug"
-    tlsEnabled:             true
-    chaincodesPath:         "./sample-chaincodes"
+    logLevel:       "debug"
+    tlsEnabled:     true
+    chaincodesPath: "./sample-chaincodes"
 
 ```
 
