@@ -5,11 +5,11 @@ OrdererOrgs:
   - Name: ordererOrg
     Domain: {{.Domain}}
     CA:
-        Country: AR
-        Province: Buenos Aires
-        Locality: Buenos Aires
+      Country: AR
+      Province: Buenos Aires
+      Locality: Buenos Aires
     Specs:
-        - Hostname: orderer
+      - Hostname: orderer
     Template:
       Count: {{.Orderer.Consenters}}
       Start: 1
@@ -21,12 +21,15 @@ PeerOrgs:
   - Name: org{{$i}}
     Domain: org{{$i}}.{{$.Domain}}
     CA:
-        Country: AR
-        Province: Buenos Aires
-        Locality: Buenos Aires
+      Hostname: ca
+      Country: AR
+      Province: Buenos Aires
+      Locality: Buenos Aires
     Template:
       Count: {{$.PeersPerOrg}}
       Start: 1
+      SANS:
+        - "localhost"
     Users:
       Count: 1
 {{end}}

@@ -34,13 +34,13 @@ Profiles:
                 # the serialized messages in a batch. A message larger than the preferred
                 # max bytes will result in a batch larger than preferred max bytes.
                 PreferredMaxBytes: 512 KB
-
+            {{if eq $.OrdererType "kafka"}}
             Kafka:
                 # Brokers: A list of Kafka brokers to which the orderer connects
                 # NOTE: Use IP:port notation
                 Brokers:{{range $.KafkaBrokers}}
                     - {{.Name}}:9092{{end}}
-
+            {{end}}
             # Organizations is the list of orgs which are defined as participants on
             # the orderer side of the network
             Organizations:

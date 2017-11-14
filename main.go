@@ -196,6 +196,7 @@ var (
 	cryptoConfigPath string
 	genesisPath      string
 	channelsPath     string
+	networkPath      string
 )
 
 func (c *configuration) readConfig(configFile string) *configuration {
@@ -288,9 +289,12 @@ func main() {
 	cryptoConfigPath = filepath.Join(volumesPath, "crypto-config")
 	genesisPath = filepath.Join(cryptoConfigPath, "genesis")
 	channelsPath = filepath.Join(cryptoConfigPath, "channel-artifacts")
+	networkPath = filepath.Join(volumesPath, "network")
 
+	os.MkdirAll(config.Network, 0777)
 	os.MkdirAll(genesisPath, 0777)
 	os.MkdirAll(channelsPath, 0777)
+	os.MkdirAll(networkPath, 0777)
 
 	/* This step is required when using SOLO ordering service
 	 * Consenters field is optional is such case
@@ -500,28 +504,28 @@ func main() {
 func generateCryptoConfigFile(config *configuration) {
 	fmt.Print("Generating crypto config file: ")
 	cryptoConfigTemplate := loadTemplate("crypto-config-template.yaml")
-	execTemplate(cryptoConfigTemplate, config.Network, config, "crypto-config.yaml")
+	execTemplate(cryptoConfigTemplate, config, config.Network, "crypto-config.yaml")
 	fmt.Println("SUCCEED")
 }
 
 func generateConfigTXFile(genInfo *genInfo) {
 	fmt.Print("Generating configTX file: ")
 	configTXTemplate := loadTemplate("configtx-template.yaml")
-	execTemplate(configTXTemplate, genInfo.Name, genInfo, "configtx.yaml")
+	execTemplate(configTXTemplate, genInfo, genInfo.Name, "configtx.yaml")
 	fmt.Println("SUCCEED")
 }
 
 func generateDockerComposeFile(genInfo *genInfo) {
 	fmt.Print("Generating docker compose file: ")
 	dockerComposeTemplate := loadTemplate("docker-compose-template.yaml")
-	execTemplate(dockerComposeTemplate, genInfo.Name, genInfo, "docker-compose.yaml")
+	execTemplate(dockerComposeTemplate, genInfo, genInfo.Name, "docker-compose.yaml")
 	fmt.Println("SUCCEED")
 }
 
 func generateNetworkConfigFile(genInfo *genInfo) {
 	fmt.Print("Generating network config file: ")
 	networkConfigTemplate := loadTemplate("network-config-template.yaml")
-	execTemplate(networkConfigTemplate, genInfo.Name, genInfo, "network-config.yaml")
+	execTemplate(networkConfigTemplate, genInfo, networkPath, "network-config.yaml")
 	fmt.Println("SUCCEED")
 }
 
@@ -540,7 +544,7 @@ func generateNetworkConfigForOrgs(genInfo *genInfo) {
 			Organization: org.Name,
 		}
 
-		execTemplate(networkConfigTemplate, genInfo.Name, genInfoClientDef, fmt.Sprintf("network-config-%s.yaml", org.Name))
+		execTemplate(networkConfigTemplate, genInfoClientDef, networkPath, fmt.Sprintf("network-config-%s.yaml", org.Name))
 		fmt.Println("SUCCEED")
 	}
 }
@@ -548,7 +552,7 @@ func generateNetworkConfigForOrgs(genInfo *genInfo) {
 func generatePullImagesScriptFile(genInfo *genInfo) {
 	fmt.Print("Generating script to pull fabric docker images: ")
 	pullImagesTemplate := loadTemplate("pull-docker-images-template.yaml")
-	execTemplate(pullImagesTemplate, genInfo.Name, genInfo, "pull-docker-images.sh")
+	execTemplate(pullImagesTemplate, genInfo, genInfo.Name, "pull-docker-images.sh")
 	args := []string{"+x", filepath.Join(genInfo.Name, "pull-docker-images.sh")}
 	if err := exec.Command("chmod", args...).Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -695,10 +699,8 @@ func inc(val int) int {
 	return val + 1
 }
 
-func execTemplate(t *template.Template, network string, genInfo interface{}, targetFile string) error {
-	os.MkdirAll(network, 0777)
-
-	path := filepath.Join(network, targetFile)
+func execTemplate(t *template.Template, genInfo interface{}, targetPath string, targetFile string) error {
+	path := filepath.Join(targetPath, targetFile)
 
 	f, e := os.Create(path)
 	if e != nil {

@@ -48,25 +48,26 @@ organizations: {{range $.PeerOrganizations}}
       - ca.{{.FullName}}
 
     adminPrivateKey:
-      path: crypto-config/peerOrganizations/{{.FullName}}/users/Admin@{{.FullName}}/msp/keystore/secret.key
+      path: ./crypto-config/peerOrganizations/{{.FullName}}/users/Admin@{{.FullName}}/msp/keystore/secret.key
     signedCert:
-      path: crypto-config/peerOrganizations/{{.FullName}}/users/Admin@{{.FullName}}/msp/signcerts/Admin@{{.FullName}}-cert.pem
+      path: ./crypto-config/peerOrganizations/{{.FullName}}/users/Admin@{{.FullName}}/msp/signcerts/Admin@{{.FullName}}-cert.pem
 {{end}}
 #
 # List of orderers to send transaction and channel create/update requests to.
 #
 orderers: {{range $.Orderers}}
   {{.Name}}:
-    url: grpcs://localhost:{{.ExposedPort}}
+    url: {{if $.TLSEnabled}}grpcs{{else}}grpc{{end}}://localhost:{{.ExposedPort}}
 
     # these are standard properties defined by the gRPC library
     # they will be passed in as-is to gRPC client constructor
     grpcOptions:
-      ssl-target-name-override: {{.Name}}
       grpc-max-send-message-length: 15
-
+      {{if $.TLSEnabled}}ssl-target-name-override: {{.Name}}{{end}}  
+    {{if $.TLSEnabled}}
     tlsCACerts:
-      path: crypto-config/ordererOrganizations/{{$.Domain}}/orderers/{{.Name}}/tls/ca.crt
+      path: ./crypto-config/ordererOrganizations/{{$.Domain}}/orderers/{{.Name}}/tls/ca.crt
+    {{- end}}
 {{end}}
 #
 # List of peers to send various requests to, including endorsement, query
@@ -75,29 +76,31 @@ orderers: {{range $.Orderers}}
 peers: {{range $.Peers}}
   {{.Name}}:
     # this URL is used to send endorsement and query requests
-    url: grpcs://localhost:{{.ExposedPort}}
-
+    url: {{if $.TLSEnabled}}grpcs{{else}}grpc{{end}}://localhost:{{.ExposedPort}}
     # this URL is used to connect the EventHub and registering event listeners
-    eventUrl: grpcs://localhost:{{.ExposedEventPort}}
+    eventUrl: {{if $.TLSEnabled}}grpcs{{else}}grpc{{end}}://localhost:{{.ExposedEventPort}}
 
     grpcOptions:
-      ssl-target-name-override: {{.Name}}
+      {{if $.TLSEnabled}}ssl-target-name-override: {{.Name}}{{end}}
+    {{if $.TLSEnabled}}
     tlsCACerts:
-      path: crypto-config/peerOrganizations/{{.Organization.FullName}}/peers/{{.Name}}/tls/ca.crt
+      path: ./crypto-config/peerOrganizations/{{.Organization.FullName}}/peers/{{.Name}}/tls/ca.crt
+    {{- end}}
 {{end}}
 #
 # Fabric-CA Certificate Authority provided by Hyperledger Fabric
 #
 certificateAuthorities: {{range $.CAs}}
   {{.Name}}:
-    url: https://localhost:{{.ExposedPort}}
+    url: {{if $.TLSEnabled}}https{{else}}http{{end}}://localhost:{{.ExposedPort}}
     # the properties specified under this object are passed to the 'http' client verbatim when
     # making the request to the Fabric-CA server
     httpOptions:
       verify: false
+    {{if $.TLSEnabled}}
     tlsCACerts:
-      path: crypto-config/peerOrganizations/{{.OrgFullName}}/ca/{{.Name}}-cert.pem
-
+      path: ./crypto-config/peerOrganizations/{{.OrgFullName}}/ca/{{.Name}}-cert.pem
+    {{- end}}
     # Fabric-CA supports dynamic user enrollment via REST APIs. A "root" user, a.k.a registrar, is
     # needed to enroll and invoke new users.
     registrar:

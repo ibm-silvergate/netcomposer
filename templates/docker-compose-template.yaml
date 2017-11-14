@@ -60,7 +60,7 @@ services:
       {{- if $.TLSEnabled}}
       - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/fabric/crypto-config/tls/server.crt
       - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/fabric/crypto-config/tls/server.key
-      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/fabric/crypto-config/tls/ca.crt]
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/fabric/crypto-config/tls/ca.crt{{range $.PeerOrganizations}}, /var/hyperledger/fabric/crypto-config/peerOrganizations/{{.FullName}}/tls/ca.crt{{end}}]
       {{- end}}
       {{- if eq $.OrdererType "kafka"}}
       - ORDERER_KAFKA_RETRY_SHORTINTERVAL=1s
@@ -72,6 +72,10 @@ services:
     volumes:
       - ./volumes/crypto-config/genesis/:/var/hyperledger/fabric/crypto-config/genesis/
       - ./volumes/crypto-config/ordererOrganizations/{{$.Domain}}/orderers/{{.Name}}/:/var/hyperledger/fabric/crypto-config/
+      {{range $.PeerOrganizations -}}
+      - ./volumes/crypto-config/peerOrganizations/{{.FullName}}/peers/peer1.{{.FullName}}/tls/ca.crt:/var/hyperledger/fabric/crypto-config/peerOrganizations/{{.FullName}}/tls/ca.crt
+      #- ./volumes/crypto-config/peerOrganizations/{{.FullName}}/tlsca/tlsca.{{.FullName}}-cert.pem:/var/hyperledger/fabric/crypto-config/peerOrganizations/{{.FullName}}/tls/ca-cert.pem
+      {{- end}}
     ports:
       - {{.ExposedPort}}:{{.Port}}
     {{- if eq $.OrdererType "kafka"}}
@@ -89,15 +93,15 @@ services:
       - FABRIC_CA_SERVER_CA_NAME={{.Name}}
       - FABRIC_CA_SERVER_CA_CERTFILE=/etc/hyperledger/fabric-ca-server/crypto-config/ca/{{.Name}}-cert.pem
       - FABRIC_CA_SERVER_CA_KEYFILE=/etc/hyperledger/fabric-ca-server/crypto-config/ca/secret.key
-      - FABRIC_CA_TLS_ENABLED={{$.TLSEnabled}}
+      - FABRIC_CA_SERVER_TLS_ENABLED={{$.TLSEnabled}}
       {{- if $.TLSEnabled}}
-      - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server/crypto-config/tlsca/tls{{.Name}}-cert.pem
-      - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server/crypto-config/tlsca/secret.key
+      - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server/crypto-config/ca/{{.Name}}-cert.pem
+      - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server/crypto-config/ca/secret.key
       {{- end}}
     command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
     volumes:
       - ./volumes/crypto-config/peerOrganizations/{{.OrgFullName}}/ca/:/etc/hyperledger/fabric-ca-server/crypto-config/ca/
-      - ./volumes/crypto-config/peerOrganizations/{{.OrgFullName}}/tlsca/:/etc/hyperledger/fabric-ca-server/crypto-config/tlsca/
+      #- ./volumes/crypto-config/peerOrganizations/{{.OrgFullName}}/tlsca/:/etc/hyperledger/fabric-ca-server/crypto-config/tlsca/
     ports:
       - {{.ExposedPort}}:{{.Port}}
 {{end}}
