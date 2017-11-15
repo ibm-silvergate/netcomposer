@@ -6,6 +6,9 @@ network:     "samplenet"
 domain:      "samplenet.com"
 description: "a Fabric network bootstrapped with netcomposer"
 
+logLevel:       "debug"
+tlsEnabled:     true
+
 orderer:
     type: "solo"
 
@@ -44,6 +47,33 @@ channels:
 #            - peer: 2
 #              endorser: false
 
-logLevel:       "debug"
-tlsEnabled:     true
 chaincodesPath: "./sample-chaincodes"
+
+#chaincodes:
+#    chaincode:
+#      name: kv_chaincode_go_example01
+#      channels:
+#        - bigchannel
+#        - org1channel
+#      language: go
+#      path: ./sample-chaincodes/go/kv_chaincode_go_example01
+#      endorsing:
+#        - rule:
+#          - organization: 1
+#            endorsements: 2
+#          - organization: 2
+#            endorsements: 1
+#        - rule:
+#          - organization: 2
+#            endorsements: 2
+#
+#    chaincode:
+#      name: kv_chaincode_node_example01
+#      channels:
+#        - org2channel
+#      language: node
+#      path: ./sample-chaincodes/node/kv_chaincode_node_example01
+#      endorsing:
+#        - rule:
+#          - organization: 2
+#            endorsements: 1
