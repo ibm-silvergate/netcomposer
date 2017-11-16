@@ -112,6 +112,8 @@ services:
     container_name: {{.DB.Name}}
     {{if eq $.DBProvider "CouchDB" -}}
     image: {{$.DockerNS}}/fabric-couchdb:{{$.Arch}}-{{$.Version}}
+    {{else -}}
+    image: {{.DB.Image}}
     {{end -}}
     ports:
       - {{.DB.ExposedPort}}:{{.DB.Port}}
@@ -143,8 +145,17 @@ services:
         - CORE_PEER_GOSSIP_SKIPHANDSHAKE=true
         - CORE_PEER_PROFILE_ENABLED=true
         - CORE_LEDGER_STATE_STATEDATABASE={{.DB.Provider}}
+        {{- if not (eq .DB.Provider "goleveldb") -}}
         {{- if eq .DB.Provider "CouchDB"}}
         - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS={{.DB.Name}}:{{.DB.Port}}
+        {{- else}}
+        - CORE_LEDGER_STATE_{{.DB.Provider}}_HOST={{.DB.Name}}
+        - CORE_LEDGER_STATE_{{.DB.Provider}}_PORT={{.DB.Port}}
+        - CORE_LEDGER_STATE_{{.DB.Provider}}_USERNAME={{.DB.Username}}
+        - CORE_LEDGER_STATE_{{.DB.Provider}}_PASSWORD={{.DB.Password}}
+        - CORE_LEDGER_STATE_{{.DB.Provider}}_DRIVER={{.DB.Driver}}
+        - CORE_LEDGER_STATE_{{.DB.Provider}}_DBNAME={{.DB.DB}}
+        {{- end}}
         {{- end}}
         - CORE_LOGGING_LEVEL={{$.LogLevel}}
         - CORE_NEXT=true
