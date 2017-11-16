@@ -259,8 +259,7 @@ func loadConfig() *configuration {
 	}
 
 	if config.DB.Provider != DBProviderGoLevelDB && config.DB.Provider != DBProviderCouchDB {
-		fmt.Fprintln(os.Stderr, fmt.Sprintf("Unsupported db provider  %s", config.DB.Provider))
-		os.Exit(1)
+		fmt.Fprintln(os.Stderr, fmt.Sprintf("Warnning: using unofficial db provider  %s", config.DB.Provider))
 	}
 
 	if config.PeerOrgs <= 0 {
