@@ -47,7 +47,7 @@ channels:
 #            - peer: 2
 #              endorser: false
 
-chaincodesPath: "./sample-chaincodes"
+chaincodesPath: "./sample-chaincodes/"
 
 #chaincodes:
 #    chaincode:
