@@ -48,10 +48,6 @@ The tool takes as input a config file specifying the network components:
 
 #### 1. Running the tool
 
-    - Using the binaries for your platform (download from release folder)
-    net-composer -spec samplenet.yaml
-
-    - Running the tool without binaries
     go run main.go -spec samplenet.yaml
 
 #### 2. Start the network
