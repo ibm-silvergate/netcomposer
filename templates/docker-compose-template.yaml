@@ -194,7 +194,6 @@ services:
         - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/crypto-config/tls/server.key
         - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/crypto-config/tls/ca.crt
         {{- end}}
-        - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/crypto-config/msp
         - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/crypto-config/users/Admin@{{.Organization.FullName}}/msp
         - ORDERER_CA=/etc/hyperledger/fabric/crypto-config/orderer/msp/tlscacerts/tlsca.{{$.Domain}}-cert.pem
       working_dir: /opt/gopath/src/github.com/hyperledger/fabric
