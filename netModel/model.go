@@ -14,15 +14,15 @@ type NetModel struct {
 	Domain              string
 	Description         string
 	OrdererType         string
-	KafkaBrokers        []KafkaBroker
-	ZooKeeperNodes      []ZKNode
+	KafkaBrokers        []*KafkaBroker
+	ZooKeeperNodes      []*ZKNode
 	DBProvider          string
-	OrdererOrganization Organization
-	Orderers            []Orderer
-	CAs                 []CA
-	PeerOrganizations   []Organization
-	Channels            []Channel
-	Peers               []Peer
+	OrdererOrganization *Organization
+	Orderers            []*Orderer
+	CAs                 []*CA
+	PeerOrganizations   []*Organization
+	Channels            []*Channel
+	Peers               []*Peer
 	LogLevel            string
 	TLSEnabled          bool
 }
@@ -30,17 +30,17 @@ type NetModel struct {
 type Organization struct {
 	Name     string
 	FullName string
-	Peers    []Peer
+	Peers    []*Peer
 }
 
 type Channel struct {
 	Name          string
-	Organizations []ChannelOrg
+	Organizations []*ChannelOrg
 }
 
 type ChannelOrg struct {
 	Name  string
-	Peers []ChannelPeer
+	Peers []*ChannelPeer
 }
 
 type ChannelPeer struct {
@@ -61,20 +61,20 @@ type CA struct {
 
 type Orderer struct {
 	Name         string
-	Organization Organization
+	Organization *Organization
 	ExposedPort  int
 	Port         int
 }
 
 type Peer struct {
 	Name                string
-	Organization        Organization
-	OrdererOrganization Organization
+	Organization        *Organization
+	OrdererOrganization *Organization
 	ExposedPort         int
 	Port                int
 	ExposedEventPort    int
 	EventPort           int
-	DB                  PeerDB
+	DB                  *PeerDB
 }
 
 type PeerDB struct {
@@ -106,28 +106,28 @@ func BuildNetModelFrom(spec *netSpec.NetSpec) *NetModel {
 		FullName: fmt.Sprintf("ordererOrg.%s", spec.Domain),
 	}
 
-	ordererList := make([]Orderer, spec.Orderer.Consenters)
+	ordererList := make([]*Orderer, spec.Orderer.Consenters)
 	for i := 0; i < spec.Orderer.Consenters; i++ {
-		ordererList[i] = Orderer{
+		ordererList[i] = &Orderer{
 			Name:         fmt.Sprintf("orderer%d.%s", i+1, spec.Domain),
-			Organization: *ordererOrganization,
+			Organization: ordererOrganization,
 			ExposedPort:  7050 + 100*i,
 			Port:         7050,
 		}
 	}
 
-	peerOrganizationList := make([]Organization, spec.PeerOrgs)
-	caList := make([]CA, spec.PeerOrgs)
-	peerList := make([]Peer, spec.PeerOrgs*spec.PeersPerOrg)
+	peerOrganizationList := make([]*Organization, spec.PeerOrgs)
+	caList := make([]*CA, spec.PeerOrgs)
+	peerList := make([]*Peer, spec.PeerOrgs*spec.PeersPerOrg)
 
 	for i := 0; i < spec.PeerOrgs; i++ {
-		peerOrganizationList[i] = Organization{
+		peerOrganizationList[i] = &Organization{
 			Name:     fmt.Sprintf("org%d", i+1),
 			FullName: fmt.Sprintf("org%d.%s", i+1, spec.Domain),
-			Peers:    make([]Peer, spec.PeersPerOrg),
+			Peers:    make([]*Peer, spec.PeersPerOrg),
 		}
 
-		caList[i] = CA{
+		caList[i] = &CA{
 			Name:        fmt.Sprintf("ca.%s", peerOrganizationList[i].FullName),
 			OrgFullName: peerOrganizationList[i].FullName,
 			ExposedPort: 7054 + 100*i,
@@ -154,15 +154,15 @@ func BuildNetModelFrom(spec *netSpec.NetSpec) *NetModel {
 				DB:          spec.DB.DB,
 			}
 
-			peer := Peer{
+			peer := &Peer{
 				Name:                fmt.Sprintf("peer%d.%s", j+1, peerOrganizationList[i].FullName),
 				Organization:        peerOrganizationList[i],
-				OrdererOrganization: *ordererOrganization,
+				OrdererOrganization: ordererOrganization,
 				ExposedPort:         peerHostPort,
 				Port:                7051,
 				ExposedEventPort:    eventHostPort,
 				EventPort:           7053,
-				DB:                  *peerdb,
+				DB:                  peerdb,
 			}
 
 			peerOrganizationList[i].Peers[j] = peer
@@ -170,36 +170,36 @@ func BuildNetModelFrom(spec *netSpec.NetSpec) *NetModel {
 		}
 	}
 
-	kafkaBrokerList := make([]KafkaBroker, spec.Orderer.KafkaBrokers)
+	kafkaBrokerList := make([]*KafkaBroker, spec.Orderer.KafkaBrokers)
 	for i := 0; i < spec.Orderer.KafkaBrokers; i++ {
-		kafkaBrokerList[i] = KafkaBroker{
+		kafkaBrokerList[i] = &KafkaBroker{
 			ID:   i + 1,
 			Name: fmt.Sprintf("kafka%d.%s", i+1, spec.Domain),
 		}
 	}
 
-	zkNodeList := make([]ZKNode, spec.Orderer.ZookeeperNodes)
+	zkNodeList := make([]*ZKNode, spec.Orderer.ZookeeperNodes)
 	for i := 0; i < spec.Orderer.ZookeeperNodes; i++ {
-		zkNodeList[i] = ZKNode{
+		zkNodeList[i] = &ZKNode{
 			ID:   i + 1,
 			Name: fmt.Sprintf("zookeeper%d.%s", i+1, spec.Domain),
 		}
 	}
 
-	channelList := make([]Channel, len(spec.Channels))
+	channelList := make([]*Channel, len(spec.Channels))
 	for i, chSpec := range spec.Channels {
-		chOrgList := make([]ChannelOrg, len(chSpec.Organizations))
+		chOrgList := make([]*ChannelOrg, len(chSpec.Organizations))
 
 		for j, chOrgSpec := range chSpec.Organizations {
-			chOrgList[j] = ChannelOrg{Name: peerOrganizationList[chOrgSpec.ID-1].Name}
+			chOrgList[j] = &ChannelOrg{Name: peerOrganizationList[chOrgSpec.ID-1].Name}
 
 			orgPeers := peerOrganizationList[chOrgSpec.ID-1].Peers
 
 			//Assign peer names
-			chOrgList[j].Peers = make([]ChannelPeer, len(chOrgSpec.Peers))
+			chOrgList[j].Peers = make([]*ChannelPeer, len(chOrgSpec.Peers))
 
 			for p, chPeerSpec := range chOrgSpec.Peers {
-				chOrgList[j].Peers[p] = ChannelPeer{
+				chOrgList[j].Peers[p] = &ChannelPeer{
 					Name:           orgPeers[chPeerSpec.ID-1].Name,
 					Endorser:       chPeerSpec.Endorser,
 					QueryChaincode: chPeerSpec.QueryChaincode,
@@ -209,7 +209,7 @@ func BuildNetModelFrom(spec *netSpec.NetSpec) *NetModel {
 			}
 		}
 
-		channelList[i] = Channel{Name: chSpec.Name, Organizations: chOrgList}
+		channelList[i] = &Channel{Name: chSpec.Name, Organizations: chOrgList}
 	}
 
 	return &NetModel{
@@ -223,7 +223,7 @@ func BuildNetModelFrom(spec *netSpec.NetSpec) *NetModel {
 		KafkaBrokers:        kafkaBrokerList,
 		ZooKeeperNodes:      zkNodeList,
 		DBProvider:          spec.DB.Provider,
-		OrdererOrganization: *ordererOrganization,
+		OrdererOrganization: ordererOrganization,
 		Orderers:            ordererList,
 		CAs:                 caList,
 		PeerOrganizations:   peerOrganizationList,
