@@ -74,14 +74,6 @@ The tool takes as input a config file specifying the network components:
 
     peer chaincode instantiate -o orderer1.samplenet.com:7050 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C bigchannel -n mycc1 -v 1.0 -c '{"Args":["init","a","100","b","200"]}' -P "OR ('org1MSP.member','org2MSP.member')"
 
-#### Upgrade a chaincode (only in one peer)
-
-    docker exec -it cli.peer1.org1.samplenet.com bash
-
-    peer chaincode install -n mycc1 -v 2.0 -p github.com/hyperledger/fabric/chaincodes/chaincode_example01
-
-    peer chaincode upgrade -o orderer1.samplenet.com:7050 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C bigchannel -n mycc1 -v 2.0 -c '{"Args":["init","a","100","b","200"]}' -P "OR ('org1MSP.member','org2MSP.member')"
-
 #### Query/Invoke chaincodes
 
     docker exec -it cli.peer1.org1.samplenet.com bash
