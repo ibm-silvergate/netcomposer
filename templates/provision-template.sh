@@ -92,22 +92,24 @@ panicOnError $? "Basic containers successfully started!" "Error while starting b
 ORDERER_CA='/etc/hyperledger/fabric/crypto-config/orderer/msp/tlscacerts/tlsca.{{$.Domain}}-cert.pem'
 
 {{range $i,$ch := $.Channels}}
-{{- $peer:= index (index $ch.Organizations 0).Peers 0}}
+{{- $peer:= (index (index $ch.Organizations 0).Peers 0).Peer}}
 {{- $orderer:= index $.Orderers 0}}
 createChannel 'cli.{{$peer.Name}}' '{{$orderer.Name}}:{{$orderer.Port}}' '{{.Name}}' $ORDERER_CA
 panicOnError $? "Channel '{{.Name}}' successfully created!" "Error while creating channel '{{.Name}}'"
 
 {{range .Organizations}}{{range .Peers -}}
-joinPeerToChannel 'cli.{{.Name}}' '{{$ch.Name}}'
-panicOnError $? "Peer '{{.Name}}' successfully joined channel '{{$ch.Name}}'" "Error while peer '{{.Name}}' joins channel '{{$ch.Name}}'"
+joinPeerToChannel 'cli.{{.Peer.Name}}' '{{$ch.Name}}'
+panicOnError $? "Peer '{{.Peer.Name}}' successfully joined channel '{{$ch.Name}}'" "Error while peer '{{.Peer.Name}}' joins channel '{{$ch.Name}}'"
 {{end}}
 {{end -}}{{end -}}
 
-
-#installChaincode 'cli.peer1.org1.samplenet.com' 'mycc1' '1.0' 'golang' 'github.com/hyperledger/fabric/chaincodes/go/kv_chaincode_go_example01'
-#panicOnError $? "Chaincode sucessfully instaled" "Error while installing chaincode"
-
-#DATA='{"Args":["init","a","100","b","200"]}'
-#POLICY='OR("org1MSP.member","org2MSP.member")'
-#instantiateChaincode 'cli.peer1.org1.samplenet.com' 'orderer1.samplenet.com:7050' true $ORDERER_CA 'bigchannel' 'mycc1' '1.0' $DATA $POLICY
-#panicOnError $? "Chaincode sucessfully instantiated" "Error while instantiating chaincode"
+{{range $i, $cc := $.Chaincodes}}{{range .Channels}}{{range .Organizations}}{{range .Peers}}
+{{- if .Endorser}}
+{{- if eq $cc.Language "golang"}}
+installChaincode 'cli.{{.Peer.Name}}' '{{$cc.Name}}' '{{$cc.Version}}' '{{$cc.Language}}' 'github.com/hyperledger/fabric/chaincodes/{{$cc.Path}}'
+{{- else}}
+installChaincode 'cli.{{.Peer.Name}}' '{{$cc.Name}}' '{{$cc.Version}}' '{{$cc.Language}}' '$GOPATH/src/github.com/hyperledger/fabric/chaincodes/{{$cc.Path}}'
+{{- end}}
+panicOnError $? "Chaincode {{$cc.Name}} sucessfully installed in peer {{.Peer.Name}}" "Error while installing chaincode {{$cc.Name}} in peer {{.Peer.Name}}"
+{{- end}}
+{{end}}{{end}}{{end}}{{end}}

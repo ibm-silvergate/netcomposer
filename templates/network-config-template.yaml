@@ -24,7 +24,7 @@ channels:
     {{end -}}
 
     peers: {{range .Organizations}}{{range .Peers}}
-      {{.Name}}:
+      {{.Peer.Name}}:
         endorsingPeer: {{.Endorser}}
         chaincodeQuery: {{.QueryChaincode}}
         ledgerQuery: {{.QueryLedger}}

@@ -19,21 +19,22 @@ const (
 )
 
 type NetSpec struct {
-	DockerNS       string         `yaml:"DOCKER_NS"`
-	Arch           string         `yaml:"ARCH"`
-	Version        string         `yaml:"VERSION"`
-	Network        string         `yaml:"network"`
-	Domain         string         `yaml:"domain"`
-	Description    string         `yaml:"description"`
-	Orderer        *OrdererSpec   `yaml:"orderer"`
-	DB             *DBSpec        `yaml:"db"`
-	PeerOrgs       int            `yaml:"peerOrganizations"`
-	PeersPerOrg    int            `yaml:"peersPerOrganization"`
-	PeerOrgUsers   int            `yaml:"usersPerOrganization"`
-	Channels       []*ChannelSpec `yaml:"channels"`
-	LogLevel       string         `yaml:"logLevel"`
-	TLSEnabled     bool           `yaml:"tlsEnabled"`
-	ChaincodesPath string         `yaml:"chaincodesPath"`
+	DockerNS       string           `yaml:"DOCKER_NS"`
+	Arch           string           `yaml:"ARCH"`
+	Version        string           `yaml:"VERSION"`
+	Network        string           `yaml:"network"`
+	Domain         string           `yaml:"domain"`
+	Description    string           `yaml:"description"`
+	Orderer        *OrdererSpec     `yaml:"orderer"`
+	DB             *DBSpec          `yaml:"db"`
+	PeerOrgs       int              `yaml:"peerOrganizations"`
+	PeersPerOrg    int              `yaml:"peersPerOrganization"`
+	PeerOrgUsers   int              `yaml:"usersPerOrganization"`
+	Channels       []*ChannelSpec   `yaml:"channels"`
+	LogLevel       string           `yaml:"logLevel"`
+	TLSEnabled     bool             `yaml:"tlsEnabled"`
+	ChaincodesPath string           `yaml:"chaincodesPath"`
+	Chaincodes     []*ChaincodeSpec `yaml:"chaincodes"`
 }
 
 type OrdererSpec struct {
@@ -71,6 +72,24 @@ type DBSpec struct {
 	Password  string `yaml:"password"`
 	Driver    string `yaml:"driver"`
 	DB        string `yaml:"db"`
+}
+
+type ChaincodeSpec struct {
+	Name           string `yaml:"name"`
+	Channels       []string
+	Language       string `yaml:"language"`
+	Path           string `yaml:"path"`
+	Version        string `yaml:"version"`
+	EndorcingRules []*EndorcingRuleSpec
+}
+
+type EndorcingRuleSpec struct {
+	Terms []*EndorcingRuleTermSpec
+}
+
+type EndorcingRuleTermSpec struct {
+	Organization string `yaml:"organization"`
+	Endorsements int    `yaml:"endorsements"`
 }
 
 func LoadFromFile(specFile string) (*NetSpec, error) {
@@ -149,11 +168,11 @@ func (spec *NetSpec) Validate() error {
 	}
 
 	if spec.Orderer.Type != OrderingServiceSOLO && spec.Orderer.Type != OrderingServiceKafKa {
-		return fmt.Errorf("Unsupported orderer type %s", spec.Orderer.Type)
+		return fmt.Errorf("Unsupported orderer type '%s'", spec.Orderer.Type)
 	}
 
 	if spec.Orderer.Type == OrderingServiceKafKa && spec.Orderer.Consenters <= 0 {
-		return fmt.Errorf("A positive number of orderer nodes (consenters) is required if orderer type is %s", spec.Orderer.Type)
+		return fmt.Errorf("A positive number of orderer nodes (consenters) is required if orderer type is '%s'", spec.Orderer.Type)
 	}
 
 	if spec.Orderer.Type == OrderingServiceKafKa && spec.Orderer.KafkaBrokers < 1 {
@@ -161,11 +180,11 @@ func (spec *NetSpec) Validate() error {
 	}
 
 	if spec.Orderer.Type == OrderingServiceKafKa && spec.Orderer.ZookeeperNodes < 1 {
-		return fmt.Errorf("A positive number of zookeeper nodes is required if orderer type is %s", spec.Orderer.Type)
+		return fmt.Errorf("A positive number of zookeeper nodes is required if orderer type is '%s'", spec.Orderer.Type)
 	}
 
 	if spec.DB.Provider != DBProviderGoLevelDB && spec.DB.Provider != DBProviderCouchDB {
-		log.Printf("Warnning: using unofficial db provider  %s\r\n", spec.DB.Provider)
+		log.Printf("Warnning: using unofficial db provider  '%s'\r\n", spec.DB.Provider)
 	}
 
 	if spec.PeerOrgs <= 0 {
@@ -181,26 +200,28 @@ func (spec *NetSpec) Validate() error {
 	}
 
 	for _, chSpec := range spec.Channels {
-		if chSpec.Organizations == nil {
-			continue
+		if chSpec.Organizations == nil || len(chSpec.Organizations) == 0 {
+			return fmt.Errorf("Channel '%s' has not specified any organization", chSpec.Name)
 		}
 
 		for _, chOrgSpec := range chSpec.Organizations {
 			if chOrgSpec.ID < 1 || chOrgSpec.ID > spec.PeerOrgs {
-				return fmt.Errorf("Invalid organization ID (%d) specified for channel %s", chOrgSpec.ID, chSpec.Name)
+				return fmt.Errorf("Invalid organization ID '%d' specified for channel '%s'", chOrgSpec.ID, chSpec.Name)
 			}
 
-			if chOrgSpec.Peers == nil {
-				continue
+			if chOrgSpec.Peers == nil || len(chOrgSpec.Peers) == 0 {
+				return fmt.Errorf("Channel '%s' has not specified any peer for organization '%d'", chSpec.Name, chOrgSpec.ID)
 			}
 
 			for _, chPeerSpec := range chOrgSpec.Peers {
 				if chPeerSpec.ID < 1 || chPeerSpec.ID > spec.PeersPerOrg {
-					panic(fmt.Sprintf("Invalid peer ID (%d) specified for organization %d in channel %s", chPeerSpec.ID, chOrgSpec.ID, chSpec.Name))
+					return fmt.Errorf("Invalid peer ID '%d' specified for organization '%d' in channel '%s'", chPeerSpec.ID, chOrgSpec.ID, chSpec.Name)
 				}
 			}
 		}
 	}
+
+	//TODO: validate chaincodes, including references to nonexistent channels
 
 	return nil
 }

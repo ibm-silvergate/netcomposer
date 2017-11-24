@@ -21,8 +21,9 @@ type NetModel struct {
 	Orderers            []*Orderer
 	CAs                 []*CA
 	PeerOrganizations   []*Organization
-	Channels            []*Channel
+	Channels            map[string]*Channel
 	Peers               []*Peer
+	Chaincodes          []*Chaincode
 	LogLevel            string
 	TLSEnabled          bool
 }
@@ -39,12 +40,12 @@ type Channel struct {
 }
 
 type ChannelOrg struct {
-	Name  string
-	Peers []*ChannelPeer
+	Organization *Organization
+	Peers        []*ChannelPeer
 }
 
 type ChannelPeer struct {
-	Name           string
+	Peer           *Peer
 	Endorser       bool
 	QueryChaincode bool
 	QueryLedger    bool
@@ -88,6 +89,24 @@ type PeerDB struct {
 	Password    string
 	Driver      string
 	DB          string
+}
+
+type Chaincode struct {
+	Name           string
+	Channels       []*Channel
+	Language       string
+	Path           string
+	Version        string
+	EndorcingRules []*EndorcingRule
+}
+
+type EndorcingRule struct {
+	Terms []*EndorcingRuleTerm
+}
+
+type EndorcingRuleTerm struct {
+	Organization *Organization
+	Endorsements int
 }
 
 type KafkaBroker struct {
@@ -186,21 +205,21 @@ func BuildNetModelFrom(spec *netSpec.NetSpec) *NetModel {
 		}
 	}
 
-	channelList := make([]*Channel, len(spec.Channels))
-	for i, chSpec := range spec.Channels {
+	channels := make(map[string]*Channel, len(spec.Channels))
+	for _, chSpec := range spec.Channels {
 		chOrgList := make([]*ChannelOrg, len(chSpec.Organizations))
 
 		for j, chOrgSpec := range chSpec.Organizations {
-			chOrgList[j] = &ChannelOrg{Name: peerOrganizationList[chOrgSpec.ID-1].Name}
-
 			orgPeers := peerOrganizationList[chOrgSpec.ID-1].Peers
 
-			//Assign peer names
-			chOrgList[j].Peers = make([]*ChannelPeer, len(chOrgSpec.Peers))
+			chOrgList[j] = &ChannelOrg{
+				Organization: peerOrganizationList[chOrgSpec.ID-1],
+				Peers:        make([]*ChannelPeer, len(chOrgSpec.Peers)),
+			}
 
 			for p, chPeerSpec := range chOrgSpec.Peers {
 				chOrgList[j].Peers[p] = &ChannelPeer{
-					Name:           orgPeers[chPeerSpec.ID-1].Name,
+					Peer:           orgPeers[chPeerSpec.ID-1],
 					Endorser:       chPeerSpec.Endorser,
 					QueryChaincode: chPeerSpec.QueryChaincode,
 					QueryLedger:    chPeerSpec.QueryLedger,
@@ -209,7 +228,24 @@ func BuildNetModelFrom(spec *netSpec.NetSpec) *NetModel {
 			}
 		}
 
-		channelList[i] = &Channel{Name: chSpec.Name, Organizations: chOrgList}
+		channels[chSpec.Name] = &Channel{Name: chSpec.Name, Organizations: chOrgList}
+	}
+
+	//Build chaincode list solving references (i.e. channels are referenced by name in spec model)
+	chaincodeList := make([]*Chaincode, len(spec.Chaincodes))
+	for i, ccSpec := range spec.Chaincodes {
+		cc := &Chaincode{
+			Name:     ccSpec.Name,
+			Channels: make([]*Channel, len(ccSpec.Channels)),
+			Language: ccSpec.Language,
+			Version:  ccSpec.Version,
+			Path:     ccSpec.Path,
+		}
+		//Resolve channel reference by name
+		for j, chName := range ccSpec.Channels {
+			cc.Channels[j] = channels[chName]
+		}
+		chaincodeList[i] = cc
 	}
 
 	return &NetModel{
@@ -228,8 +264,34 @@ func BuildNetModelFrom(spec *netSpec.NetSpec) *NetModel {
 		CAs:                 caList,
 		PeerOrganizations:   peerOrganizationList,
 		Peers:               peerList,
-		Channels:            channelList,
+		Channels:            channels,
+		Chaincodes:          chaincodeList,
 		LogLevel:            spec.LogLevel,
 		TLSEnabled:          spec.TLSEnabled,
 	}
+}
+
+func (netModel *NetModel) Validate() error {
+
+	for _, ch := range netModel.Channels {
+		endorserInChannel := false
+
+		for _, chOrg := range ch.Organizations {
+			for _, chPeer := range chOrg.Peers {
+				if chPeer.Endorser {
+					endorserInChannel = true
+					break
+				}
+			}
+			if endorserInChannel {
+				break
+			}
+		}
+
+		if !endorserInChannel {
+			return fmt.Errorf("Channel '%s' does not specify any endorsing peer", ch.Name)
+		}
+	}
+
+	return nil
 }

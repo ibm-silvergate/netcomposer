@@ -33,6 +33,14 @@ The tool takes as input a config file specifying the network components:
     channels:
       - name: bigchannel
 
+    chaincodes:
+      - name: kv_chaincode_go_example01
+        version: 1.0
+        language: golang
+        path: go/kv_chaincode_go_example01
+        channels:
+          - bigchannel
+        
     logLevel:       "debug"
     tlsEnabled:     true
     chaincodesPath: "./sample-chaincodes"
@@ -58,29 +66,21 @@ The tool takes as input a config file specifying the network components:
 
     ./samplenet/provision.sh stop
     
-#### Install chaincode on peers
+#### Instantiate a chaincode
+
+    Pick any endorsing peer already joined to the channel, peer1 is used as follows:
 
     docker exec -it cli.peer1.org1.samplenet.com bash
 
-    - Go chaincode
-    peer chaincode install -l golang -n mycc1 -v 1.0 -p github.com/hyperledger/fabric/chaincodes/go/kv_chaincode_go_example01
-
-    - Node chaincode
-    peer chaincode install -l node -n mycc1 -v 1.0 -p $GOPATH/src/github.com/hyperledger/fabric/chaincodes/node/kv_chaincode_node_example01
-
-#### Instantiate a chaincode (only in one peer)
-
-    docker exec -it cli.peer1.org1.samplenet.com bash
-
-    peer chaincode instantiate -o orderer1.samplenet.com:7050 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C bigchannel -n mycc1 -v 1.0 -c '{"Args":["init","a","100","b","200"]}' -P "OR ('org1MSP.member','org2MSP.member')"
+    peer chaincode instantiate -o orderer1.samplenet.com:7050 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C bigchannel -n kv_chaincode_go_example01 -v 1.0 -c '{"Args":["init","a","100","b","200"]}' -P "OR ('org1MSP.member','org2MSP.member')"
 
 #### Query/Invoke chaincodes
 
     docker exec -it cli.peer1.org1.samplenet.com bash
 
-    peer chaincode query -o orderer1.samplenet.com:7050 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C bigchannel -n mycc1 -c '{"Args":["query","a"]}'
+    peer chaincode query -o orderer1.samplenet.com:7050 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C bigchannel -n kv_chaincode_go_example01 -c '{"Args":["query","a"]}'
 
-    peer chaincode invoke -o orderer1.samplenet.com:7050 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C bigchannel -n mycc1 -c '{"Args":["invoke", "a", "b", "10"]}'
+    peer chaincode invoke -o orderer1.samplenet.com:7050 --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C bigchannel -n kv_chaincode_go_example01 -c '{"Args":["invoke", "a", "b", "10"]}'
 
 #### Prerequisites for building the tool
 

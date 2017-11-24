@@ -76,12 +76,16 @@ func main() {
 	netSpec.SetDefaults()
 
 	err = netSpec.Validate()
-
 	if err != nil {
 		log.Fatalf("Network spec is NOT valid: %v", err)
 	}
 
 	netModel := netModel.BuildNetModelFrom(netSpec)
+
+	err = netModel.Validate()
+	if err != nil {
+		log.Fatalf("Network spec is NOT valid: %v", err)
+	}
 
 	createPaths(netModel)
 

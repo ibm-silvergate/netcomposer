@@ -5,9 +5,9 @@ OrdererOrgs:
   - Name: ordererOrg
     Domain: {{.Domain}}
     CA:
-      Country: AR
-      Province: Buenos Aires
-      Locality: Buenos Aires
+      Country: US
+      Province: California
+      Locality: San Francisco
     Specs:
       - Hostname: orderer
     Template:
@@ -22,9 +22,9 @@ PeerOrgs:
     Domain: org{{$i}}.{{$.Domain}}
     CA:
       Hostname: ca
-      Country: AR
-      Province: Buenos Aires
-      Locality: Buenos Aires
+      Country: US
+      Province: California
+      Locality: San Francisco
     Template:
       Count: {{$.PeersPerOrg}}
       Start: 1

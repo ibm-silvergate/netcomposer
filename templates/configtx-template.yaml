@@ -54,7 +54,7 @@ Profiles:
       Consortium: {{$.Name}}Consortium
       Application:
         Organizations: {{range .Organizations}}
-          - *{{.Name}}{{end}}
+          - *{{.Organization.Name}}{{end}}
     {{end}}
 ################################################################################
 #

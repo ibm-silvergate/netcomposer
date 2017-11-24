@@ -8,6 +8,7 @@ description: "a Fabric network bootstrapped with netcomposer"
 
 logLevel:       "debug"
 tlsEnabled:     true
+chaincodesPath: "./sample-chaincodes/"
 
 orderer:
     type: "solo"
@@ -40,40 +41,25 @@ channels:
 #        - organization: 2
 #          peers:
 #            - peer: 1
-#              endorser: true
+#              endorser: false
 #              queryChaincode: true
 #              queryLedger: true
 #              eventSource: true
 #            - peer: 2
 #              endorser: false
 
-chaincodesPath: "./sample-chaincodes/"
-
-#chaincodes:
-#    chaincode:
-#      name: kv_chaincode_go_example01
-#      channels:
-#        - bigchannel
-#        - org1channel
-#      language: go
-#      path: ./sample-chaincodes/go/kv_chaincode_go_example01
-#      endorsing:
-#        - rule:
-#          - organization: 1
-#            endorsements: 2
-#          - organization: 2
-#            endorsements: 1
-#        - rule:
-#          - organization: 2
-#            endorsements: 2
-#
-#    chaincode:
-#      name: kv_chaincode_node_example01
-#      channels:
-#        - org2channel
-#      language: node
-#      path: ./sample-chaincodes/node/kv_chaincode_node_example01
-#      endorsing:
-#        - rule:
-#          - organization: 2
-#            endorsements: 1
+chaincodes:
+  - name: kv_chaincode_go_example01
+    version: 1.0
+    language: golang
+    path: go/kv_chaincode_go_example01
+    channels:
+      - bigchannel
+    
+#  - name: kv_chaincode_node_example01
+#    version: 1.0
+#    language: node
+#    path: node/kv_chaincode_node_example01
+#    channels:
+#      - org1channel
+#      - org2channel
