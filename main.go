@@ -95,8 +95,6 @@ func main() {
 
 	genDockerComposeFile(netModel)
 
-	genPullImagesScriptFile(netModel)
-
 	genNetworkConfigFile(netModel)
 
 	genNetworkConfigForOrgs(netModel)
@@ -104,6 +102,10 @@ func main() {
 	genGenesisBlock(netModel, genesisPath, "genesis.block")
 
 	genChannelConfig(netModel, channelsPath)
+
+	genPullImagesScriptFile(netModel)
+
+	genProvisionScript(netModel)
 }
 
 func createPaths(netModel *netModel.NetModel) {
@@ -128,28 +130,28 @@ func createPaths(netModel *netModel.NetModel) {
 func genCryptoConfigFile(spec *netSpec.NetSpec) {
 	fmt.Print("Generating crypto config file: ")
 	cryptoConfigTemplate := loadTemplate("crypto-config-template.yaml")
-	execTemplate(cryptoConfigTemplate, spec, spec.Network, "crypto-config.yaml")
+	panicOnError(execTemplate(cryptoConfigTemplate, spec, spec.Network, "crypto-config.yaml"))
 	fmt.Println("SUCCEED")
 }
 
 func genConfigTXFile(netModel *netModel.NetModel) {
 	fmt.Print("Generating configTX file: ")
 	configTXTemplate := loadTemplate("configtx-template.yaml")
-	execTemplate(configTXTemplate, netModel, netModel.Name, "configtx.yaml")
+	panicOnError(execTemplate(configTXTemplate, netModel, netModel.Name, "configtx.yaml"))
 	fmt.Println("SUCCEED")
 }
 
 func genDockerComposeFile(netModel *netModel.NetModel) {
 	fmt.Print("Generating docker compose file: ")
 	dockerComposeTemplate := loadTemplate("docker-compose-template.yaml")
-	execTemplate(dockerComposeTemplate, netModel, netModel.Name, "docker-compose.yaml")
+	panicOnError(execTemplate(dockerComposeTemplate, netModel, netModel.Name, "docker-compose.yaml"))
 	fmt.Println("SUCCEED")
 }
 
 func genNetworkConfigFile(netModel *netModel.NetModel) {
 	fmt.Print("Generating network config file: ")
 	networkConfigTemplate := loadTemplate("network-config-template.yaml")
-	execTemplate(networkConfigTemplate, netModel, networkConfigPath, "network-config.yaml")
+	panicOnError(execTemplate(networkConfigTemplate, netModel, networkConfigPath, "network-config.yaml"))
 	fmt.Println("SUCCEED")
 }
 
@@ -168,20 +170,41 @@ func genNetworkConfigForOrgs(netModel *netModel.NetModel) {
 			Organization: org.Name,
 		}
 
-		execTemplate(networkConfigTemplate, netClientDef, networkConfigPath, fmt.Sprintf("network-config-%s.yaml", org.Name))
+		panicOnError(
+			execTemplate(
+				networkConfigTemplate,
+				netClientDef,
+				networkConfigPath,
+				fmt.Sprintf("network-config-%s.yaml", org.Name)))
 		fmt.Println("SUCCEED")
 	}
 }
 
 func genPullImagesScriptFile(netModel *netModel.NetModel) {
 	fmt.Print("Generating script to pull fabric docker images: ")
-	pullImagesTemplate := loadTemplate("pull-docker-images-template.yaml")
-	execTemplate(pullImagesTemplate, netModel, netModel.Name, "pull-docker-images.sh")
+	pullImagesTemplate := loadTemplate("pull-docker-images-template.sh")
+	panicOnError(execTemplate(pullImagesTemplate, netModel, netModel.Name, "pull-docker-images.sh"))
+
 	args := []string{"+x", filepath.Join(filepath.Join(outputPath, netModel.Name), "pull-docker-images.sh")}
 	if err := exec.Command("chmod", args...).Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	fmt.Println("SUCCEED")
+}
+
+func genProvisionScript(netModel *netModel.NetModel) {
+	fmt.Print("Generating provisioning script: ")
+
+	provisionTemplate := loadTemplate("provision-template.sh")
+	panicOnError(execTemplate(provisionTemplate, netModel, netModel.Name, "provision.sh"))
+
+	args := []string{"+x", filepath.Join(filepath.Join(outputPath, netModel.Name), "provision.sh")}
+	if err := exec.Command("chmod", args...).Run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
 	fmt.Println("SUCCEED")
 }
 
@@ -324,17 +347,23 @@ func inc(val int) int {
 func execTemplate(t *template.Template, model interface{}, targetPath string, targetFile string) error {
 	path := filepath.Join(targetPath, targetFile)
 
-	f, e := os.Create(filepath.Join(outputPath, path))
-	if e != nil {
-		log.Println("Error creating file: ", e)
-		return e
+	f, err := os.Create(filepath.Join(outputPath, path))
+	if err != nil {
+		log.Println("Error creating file: ", err)
+		return err
 	}
 
-	e = t.Execute(f, model)
-	if e != nil {
-		log.Println("Error executing template: ", e)
-		return e
+	err = t.Execute(f, model)
+	if err != nil {
+		log.Println("Error executing template: ", err)
+		return err
 	}
 
 	return nil
+}
+
+func panicOnError(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
