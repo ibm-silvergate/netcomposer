@@ -25,7 +25,7 @@ db:
 #db:
 #    provider: "CouchDB"
 
-peerOrganizations:      1
+organizations:          1
 peersPerOrganization:   1
 usersPerOrganization:   1
 
@@ -40,26 +40,26 @@ channels:
 #      organizations:
 #        - organization: 2
 #          peers:
-#            - peer: 1
-#              endorser: false
+#            - peer:           1
+#              endorser:       false
 #              queryChaincode: true
-#              queryLedger: true
-#              eventSource: true
-#            - peer: 2
-#              endorser: false
+#              queryLedger:    true
+#              eventSource:    true
+#            - peer:           2
+#              endorser:       false
 
 chaincodes:
-  - name: kv_chaincode_go_example01
-    version: 1.0
+  - name:     kv_chaincode_go_example01
+    version:  1.0
     language: golang
-    path: go/kv_chaincode_go_example01
+    path:     go/kv_chaincode_go_example01
     channels:
       - bigchannel
     
-#  - name: kv_chaincode_node_example01
-#    version: 1.0
+#  - name:     kv_chaincode_node_example01
+#    version:  1.0
 #    language: node
-#    path: node/kv_chaincode_node_example01
+#    path:     node/kv_chaincode_node_example01
 #    channels:
 #      - org1channel
 #      - org2channel

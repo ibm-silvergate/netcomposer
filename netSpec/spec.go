@@ -27,7 +27,7 @@ type NetSpec struct {
 	Description    string           `yaml:"description"`
 	Orderer        *OrdererSpec     `yaml:"orderer"`
 	DB             *DBSpec          `yaml:"db"`
-	PeerOrgs       int              `yaml:"peerOrganizations"`
+	PeerOrgs       int              `yaml:"organizations"`
 	PeersPerOrg    int              `yaml:"peersPerOrganization"`
 	PeerOrgUsers   int              `yaml:"usersPerOrganization"`
 	Channels       []*ChannelSpec   `yaml:"channels"`

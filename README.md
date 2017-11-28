@@ -26,7 +26,7 @@ The tool takes as input a config file specifying the network components:
     db:
         provider: "goleveldb"
 
-    peerOrganizations:    1
+    organizations:        1
     peersPerOrganization: 2
     usersPerOrganization: 1
 
@@ -34,10 +34,10 @@ The tool takes as input a config file specifying the network components:
       - name: bigchannel
 
     chaincodes:
-      - name: kv_chaincode_go_example01
-        version: 1.0
+      - name:     kv_chaincode_go_example01
+        version:  1.0
         language: golang
-        path: go/kv_chaincode_go_example01
+        path:     go/kv_chaincode_go_example01
         channels:
           - bigchannel
         
