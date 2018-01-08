@@ -310,9 +310,19 @@ func copyChaincodes(spec *netSpec.NetSpec) {
 }
 
 func copyFolder(sPath, dPath string) {
-	cpArgs := []string{"-r", sPath, dPath}
-	if err := exec.Command("cp", cpArgs...).Run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+	sourcePath := os.ExpandEnv(sPath)
+	_, err := os.Stat(sourcePath)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	destinationPath, err := filepath.Abs(dPath)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	cpArgs := []string{"-r", sourcePath, destinationPath}
+	if err = exec.Command("cp", cpArgs...).Run(); err != nil {
 		os.Exit(1)
 	}
 }
