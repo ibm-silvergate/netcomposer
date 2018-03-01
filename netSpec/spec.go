@@ -188,15 +188,11 @@ func (spec *NetSpec) Validate() error {
 	}
 
 	if spec.PeerOrgs <= 0 {
-		return errors.New("Number of peer organziation must be greater than 0")
-	}
-
-	if spec.PeerOrgUsers <= 0 {
-		return errors.New("Number of peer per organziation must be greater than 0")
+		return errors.New("Number of peer organization must be greater than 0")
 	}
 
 	if spec.PeerOrgUsers < 0 {
-		return errors.New("Number of user peers per organziation must be non negative")
+		return errors.New("Number of user peers per organization must be non negative")
 	}
 
 	for _, chSpec := range spec.Channels {
