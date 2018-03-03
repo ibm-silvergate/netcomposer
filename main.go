@@ -222,15 +222,13 @@ func fixSKFilename(path string, f os.FileInfo, err error) (e error) {
 }
 
 func architecture() string {
-	arch, err := exec.Command("uname", "-s").Output()
+	arch, err := exec.Command("uname", "-m", "-s").Output()
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	sarch := strings.ToLower(strings.TrimSpace(string(arch)))
-
-	return strings.ToLower(fmt.Sprintf("%s", sarch)) + "-amd64"
+	return strings.Replace(strings.ToLower(strings.TrimSpace(string(arch))), " ", "-", -1)
 }
 
 func genCryptoMaterial(netModel *netModel.NetModel, cryptoConfigFile string) {
