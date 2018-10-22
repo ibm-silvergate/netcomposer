@@ -64,11 +64,11 @@ The tool takes as input a config file specifying the network components:
 
 #### Starting the network
 
-    ./samplenet/provision.sh
+    .out/samplenet/provision.sh
 
 #### Stopping the network
 
-    ./samplenet/provision.sh stop
+    .out/samplenet/provision.sh stop
     
 #### Instantiate a chaincode
 
