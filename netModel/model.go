@@ -7,25 +7,26 @@ import (
 )
 
 type NetModel struct {
-	DockerNS            string
-	Arch                string
-	Version             string
-	Name                string
-	Domain              string
-	Description         string
-	OrdererType         string
-	KafkaBrokers        []*KafkaBroker
-	ZooKeeperNodes      []*ZKNode
-	DBProvider          string
-	OrdererOrganization *Organization
-	Orderers            []*Orderer
-	CAs                 []*CA
-	PeerOrganizations   []*Organization
-	Channels            map[string]*Channel
-	Peers               []*Peer
-	Chaincodes          []*Chaincode
-	LogLevel            string
-	TLSEnabled          bool
+	DockerNS             string
+	FabricVersionTag     string
+	CaVersionTag         string
+	ThirdpartyVersionTag string
+	Name                 string
+	Domain               string
+	Description          string
+	OrdererType          string
+	KafkaBrokers         []*KafkaBroker
+	ZooKeeperNodes       []*ZKNode
+	DBProvider           string
+	OrdererOrganization  *Organization
+	Orderers             []*Orderer
+	CAs                  []*CA
+	PeerOrganizations    []*Organization
+	Channels             map[string]*Channel
+	Peers                []*Peer
+	Chaincodes           []*Chaincode
+	LogLevel             string
+	TLSEnabled           bool
 }
 
 type Organization struct {
@@ -249,25 +250,26 @@ func BuildNetModelFrom(spec *netSpec.NetSpec) *NetModel {
 	}
 
 	return &NetModel{
-		DockerNS:            spec.DockerNS,
-		Arch:                spec.Arch,
-		Version:             spec.Version,
-		Name:                spec.Network,
-		Domain:              spec.Domain,
-		Description:         spec.Description,
-		OrdererType:         spec.Orderer.Type,
-		KafkaBrokers:        kafkaBrokerList,
-		ZooKeeperNodes:      zkNodeList,
-		DBProvider:          spec.DB.Provider,
-		OrdererOrganization: ordererOrganization,
-		Orderers:            ordererList,
-		CAs:                 caList,
-		PeerOrganizations:   peerOrganizationList,
-		Peers:               peerList,
-		Channels:            channels,
-		Chaincodes:          chaincodeList,
-		LogLevel:            spec.LogLevel,
-		TLSEnabled:          spec.TLSEnabled,
+		DockerNS:             spec.DockerNS,
+		FabricVersionTag:     spec.FabricVersionTag,
+		CaVersionTag:         spec.FabricVersionTag,
+		ThirdpartyVersionTag: spec.ThirdpartyVersionTag,
+		Name:                 spec.Network,
+		Domain:               spec.Domain,
+		Description:          spec.Description,
+		OrdererType:          spec.Orderer.Type,
+		KafkaBrokers:         kafkaBrokerList,
+		ZooKeeperNodes:       zkNodeList,
+		DBProvider:           spec.DB.Provider,
+		OrdererOrganization:  ordererOrganization,
+		Orderers:             ordererList,
+		CAs:                  caList,
+		PeerOrganizations:    peerOrganizationList,
+		Peers:                peerList,
+		Channels:             channels,
+		Chaincodes:           chaincodeList,
+		LogLevel:             spec.LogLevel,
+		TLSEnabled:           spec.TLSEnabled,
 	}
 }
 

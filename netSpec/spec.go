@@ -19,22 +19,23 @@ const (
 )
 
 type NetSpec struct {
-	DockerNS       string           `yaml:"DOCKER_NS"`
-	Arch           string           `yaml:"ARCH"`
-	Version        string           `yaml:"VERSION"`
-	Network        string           `yaml:"network"`
-	Domain         string           `yaml:"domain"`
-	Description    string           `yaml:"description"`
-	Orderer        *OrdererSpec     `yaml:"orderer"`
-	DB             *DBSpec          `yaml:"db"`
-	PeerOrgs       int              `yaml:"organizations"`
-	PeersPerOrg    int              `yaml:"peersPerOrganization"`
-	PeerOrgUsers   int              `yaml:"usersPerOrganization"`
-	Channels       []*ChannelSpec   `yaml:"channels"`
-	LogLevel       string           `yaml:"logLevel"`
-	TLSEnabled     bool             `yaml:"tlsEnabled"`
-	ChaincodesPath string           `yaml:"chaincodesPath"`
-	Chaincodes     []*ChaincodeSpec `yaml:"chaincodes"`
+	DockerNS             string           `yaml:"DOCKER_NS"`
+	FabricVersionTag     string           `yaml:"FABRIC_VERSION_TAG"`
+	CaVersionTag         string           `yaml:"CA_VERSION_TAG"`
+	ThirdpartyVersionTag string           `yaml:"THIRDPARTY_VERSION_TAG"`
+	Network              string           `yaml:"network"`
+	Domain               string           `yaml:"domain"`
+	Description          string           `yaml:"description"`
+	Orderer              *OrdererSpec     `yaml:"orderer"`
+	DB                   *DBSpec          `yaml:"db"`
+	PeerOrgs             int              `yaml:"organizations"`
+	PeersPerOrg          int              `yaml:"peersPerOrganization"`
+	PeerOrgUsers         int              `yaml:"usersPerOrganization"`
+	Channels             []*ChannelSpec   `yaml:"channels"`
+	LogLevel             string           `yaml:"logLevel"`
+	TLSEnabled           bool             `yaml:"tlsEnabled"`
+	ChaincodesPath       string           `yaml:"chaincodesPath"`
+	Chaincodes           []*ChaincodeSpec `yaml:"chaincodes"`
 }
 
 type OrdererSpec struct {
@@ -159,12 +160,16 @@ func (spec *NetSpec) Validate() error {
 		return errors.New("DOCKER_NS must be specified")
 	}
 
-	if spec.Arch == "" {
-		return errors.New("ARCH must be specified")
+	if spec.FabricVersionTag == "" {
+		return errors.New("FABRIC_VERSION_TAG must be specified")
 	}
 
-	if spec.Version == "" {
-		return errors.New("VERSION must be specified")
+	if spec.CaVersionTag == "" {
+		return errors.New("CA_VERSION_TAG must be specified")
+	}
+
+	if spec.ThirdpartyVersionTag == "" {
+		return errors.New("THIRDPARTY_VERSION_TAG must be specified")
 	}
 
 	if spec.Orderer.Type != OrderingServiceSOLO && spec.Orderer.Type != OrderingServiceKafKa {
