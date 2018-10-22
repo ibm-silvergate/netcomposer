@@ -134,21 +134,21 @@ func createPaths(netModel *netModel.NetModel) {
 func genCryptoConfigFile(spec *netSpec.NetSpec) {
 	fmt.Print("Generating crypto config file: ")
 	cryptoConfigTemplate := loadTemplate("crypto-config-template.yaml")
-	panicOnError(execTemplate(cryptoConfigTemplate, spec, spec.Network, "crypto-config.yaml"))
+	panicOnError(execTemplate(cryptoConfigTemplate, spec, networkPath, "crypto-config.yaml"))
 	fmt.Println("SUCCEED")
 }
 
 func genConfigTXFile(netModel *netModel.NetModel) {
 	fmt.Print("Generating configTX file: ")
 	configTXTemplate := loadTemplate("configtx-template.yaml")
-	panicOnError(execTemplate(configTXTemplate, netModel, netModel.Name, "configtx.yaml"))
+	panicOnError(execTemplate(configTXTemplate, netModel, networkPath, "configtx.yaml"))
 	fmt.Println("SUCCEED")
 }
 
 func genDockerComposeFile(netModel *netModel.NetModel) {
 	fmt.Print("Generating docker compose file: ")
 	dockerComposeTemplate := loadTemplate("docker-compose-template.yaml")
-	panicOnError(execTemplate(dockerComposeTemplate, netModel, netModel.Name, "docker-compose.yaml"))
+	panicOnError(execTemplate(dockerComposeTemplate, netModel, networkPath, "docker-compose.yaml"))
 	fmt.Println("SUCCEED")
 }
 
@@ -187,9 +187,9 @@ func genNetworkConfigForOrgs(netModel *netModel.NetModel) {
 func genPullImagesScriptFile(netModel *netModel.NetModel) {
 	fmt.Print("Generating script to pull fabric docker images: ")
 	pullImagesTemplate := loadTemplate("pull-docker-images-template.sh")
-	panicOnError(execTemplate(pullImagesTemplate, netModel, netModel.Name, "pull-docker-images.sh"))
+	panicOnError(execTemplate(pullImagesTemplate, netModel, networkPath, "pull-docker-images.sh"))
 
-	args := []string{"+x", filepath.Join(filepath.Join(outputPath, netModel.Name), "pull-docker-images.sh")}
+	args := []string{"+x", filepath.Join(filepath.Clean(networkPath), "pull-docker-images.sh")}
 	if err := exec.Command("chmod", args...).Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -201,9 +201,9 @@ func genProvisionScript(netModel *netModel.NetModel) {
 	fmt.Print("Generating provisioning script: ")
 
 	provisionTemplate := loadTemplate("provision-template.sh")
-	panicOnError(execTemplate(provisionTemplate, netModel, netModel.Name, "provision.sh"))
+	panicOnError(execTemplate(provisionTemplate, netModel, networkPath, "provision.sh"))
 
-	args := []string{"+x", filepath.Join(filepath.Join(outputPath, netModel.Name), "provision.sh")}
+	args := []string{"+x", filepath.Join(filepath.Clean(networkPath), "provision.sh")}
 	if err := exec.Command("chmod", args...).Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -359,7 +359,7 @@ func inc(val int) int {
 func execTemplate(t *template.Template, model interface{}, targetPath string, targetFile string) error {
 	path := filepath.Join(targetPath, targetFile)
 
-	f, err := os.Create(filepath.Join(outputPath, path))
+	f, err := os.Create(filepath.Clean(path))
 	if err != nil {
 		log.Println("Error creating file: ", err)
 		return err
