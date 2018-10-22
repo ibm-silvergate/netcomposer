@@ -8,7 +8,7 @@
 function stopNetwork() {
     echo "Removing containers and chaincode images"
 
-    docker-compose -f ./{{.Name}}/docker-compose.yaml down
+    docker-compose -f ./out/{{.Name}}/docker-compose.yaml down
 
     ccContainers=$(docker ps -a  | grep "dev-" | awk '{ print $1 }')
     if [ -z "$ccContainers" ];
@@ -24,7 +24,7 @@ function stopNetwork() {
 }
 
 function startNetwork() {
-    docker-compose -f ./{{.Name}}/docker-compose.yaml up -d
+    docker-compose -f ./out/{{.Name}}/docker-compose.yaml up -d
 }
 
 function createChannel() {
