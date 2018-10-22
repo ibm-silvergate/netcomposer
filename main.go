@@ -54,7 +54,7 @@ func readFlags() {
 	flag.StringVar(&specFile, "spec", "", "spec file e.g. samplenet.yaml")
 	flag.StringVar(&templatesPath, "templates", "templates", "templates path e.g. ./templates")
 	flag.StringVar(&toolsPath, "tools", "tools", "tools path e.g. ./tools")
-	flag.StringVar(&outputPath, "output", ".", "tools path e.g. $HOME/HF-networks")
+	flag.StringVar(&outputPath, "output", "out", "tools path e.g. $HOME/HF-networks")
 	flag.Parse()
 
 	if specFile == "" {
