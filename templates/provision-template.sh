@@ -33,7 +33,7 @@ function createChannel() {
     #$3 channel
     #$4 orderer tls ca certificate
 
-    docker exec $1 /bin/sh -c "cd channel-artifacts; peer channel create -o '$2' -c $3 -f $3.tx -t 10 --tls true --cafile '$4'"
+    docker exec $1 /bin/sh -c "cd channel-artifacts; peer channel create -o '$2' -c $3 -f $3.tx -t 10s --tls true --cafile '$4'"
 }
 
 function joinPeerToChannel() {
