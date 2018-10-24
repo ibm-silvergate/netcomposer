@@ -32,8 +32,11 @@ function createChannel() {
     #$2 orderer to which the request is sent
     #$3 channel
     #$4 orderer tls ca certificate
-
+    {{- if .TLSEnabled}}
     docker exec $1 /bin/sh -c "cd channel-artifacts; peer channel create -o '$2' -c $3 -f $3.tx -t 10s --tls true --cafile '$4'"
+    {{- else}}
+    docker exec $1 /bin/sh -c "cd channel-artifacts; peer channel create -o '$2' -c $3 -f $3.tx -t 10s --cafile '$4'"
+    {{- end}}
 }
 
 function joinPeerToChannel() {
