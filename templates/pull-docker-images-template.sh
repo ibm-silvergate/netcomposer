@@ -2,15 +2,39 @@
 
 # This script pulls docker images from the Dockerhub hyperledger repositories
 
-# set the default Docker namespace and tag
+# docker namespace
 DOCKER_NS={{.DockerNS}}
-ARCH={{.Arch}}
-VERSION={{.Version}}
+# version tag for fabric images (peer, orderer, etc.)
+FABRIC_VERSION_TAG={{.FabricVersionTag}}
+# version tag for ca image
+CA_VERSION_TAG={{.CaVersionTag}}
+# version tag for couchdb, kafka, zookeeper
+THIRDPARTY_VERSION_TAG={{.ThirdpartyVersionTag}}
 
-# set of Hyperledger Fabric images
-FABRIC_IMAGES=(fabric-peer fabric-orderer fabric-ccenv fabric-javaenv fabric-kafka fabric-zookeeper fabric-couchdb)
+pullDockerImage() {
+    IMAGE=$1
+    echo "Pulling $IMAGE"
+    docker pull ${IMAGE}
+}
 
+# hyperledger fabric images
+FABRIC_IMAGES=(fabric-peer fabric-orderer fabric-ccenv fabric-javaenv)
 for image in ${FABRIC_IMAGES[@]}; do
-	echo "Pulling ${DOCKER_NS}/$image:${ARCH}-${VERSION}"
-	docker pull ${DOCKER_NS}/$image:${ARCH}-${VERSION}
+    pullDockerImage ${DOCKER_NS}/${image}:${FABRIC_VERSION_TAG}
 done
+
+# ca image
+pullDockerImage ${DOCKER_NS}/fabric-ca:${CA_VERSION_TAG}
+
+# thirdparty images
+THIRDPARTY_IMAGES=(fabric-zookeeper fabric-couchdb fabric-kafka)
+for image in ${THIRDPARTY_IMAGES[@]}; do
+    pullDockerImage ${DOCKER_NS}/${image}:${THIRDPARTY_VERSION_TAG}
+done
+
+
+
+
+
+
+

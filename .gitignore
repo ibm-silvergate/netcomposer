@@ -1,1 +1,4 @@
-bin/
+# ----- User defined ----- #
+
+# ----- Jetbrains Products ----- #
+.idea

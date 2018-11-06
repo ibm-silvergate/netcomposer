@@ -13,8 +13,12 @@ The tool takes as input a config file specifying the network components:
 ```yaml
 
     DOCKER_NS: hyperledger
-    ARCH:      x86_64
-    VERSION:   1.1.0-preview
+    # version tag for fabric images (peer, orderer, etc.)
+    FABRIC_VERSION_TAG: 1.3.0
+    # version tag for ca image
+    CA_VERSION_TAG: 1.3.0
+    # version tag for couchdb, kafka, zookeeper
+    THIRDPARTY_VERSION_TAG: 0.4.13
 
     network:     "samplenet"
     domain:      "samplenet.com"
