@@ -8,7 +8,7 @@
 function stopNetwork() {
     echo "Removing containers and chaincode images"
 
-    docker-compose -f ./{{.Name}}/docker-compose.yaml down
+    docker-compose -f ./out/{{.Name}}/docker-compose.yaml down
 
     ccContainers=$(docker ps -a  | grep "dev-" | awk '{ print $1 }')
     if [ -z "$ccContainers" ];
@@ -24,7 +24,7 @@ function stopNetwork() {
 }
 
 function startNetwork() {
-    docker-compose -f ./{{.Name}}/docker-compose.yaml up -d
+    docker-compose -f ./out/{{.Name}}/docker-compose.yaml up -d
 }
 
 function createChannel() {
@@ -33,7 +33,7 @@ function createChannel() {
     #$3 channel
     #$4 orderer tls ca certificate
 
-    docker exec $1 /bin/sh -c "cd channel-artifacts; peer channel create -o '$2' -c $3 -f $3.tx -t 10 --tls true --cafile '$4'"
+    docker exec $1 /bin/sh -c "cd channel-artifacts; peer channel create -o '$2' -c $3 -f $3.tx -t 10s --tls true --cafile '$4'"
 }
 
 function joinPeerToChannel() {
