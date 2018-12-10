@@ -190,8 +190,11 @@ func genPullImagesScriptFile(netModel *netModel.NetModel) {
 	panicOnError(execTemplate(pullImagesTemplate, netModel, networkPath, "pull-docker-images.sh"))
 
 	args := []string{"+x", filepath.Join(filepath.Clean(networkPath), "pull-docker-images.sh")}
-	if err := exec.Command("chmod", args...).Run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+	
+	cmd := exec.Command("chmod", args...)
+	if combinedOutput, err := cmd.CombinedOutput(); err != nil {
+		fmt.Printf("Err: %s\n", err)
+		fmt.Printf("\tCombined Output: %s\n", combinedOutput)
 		os.Exit(1)
 	}
 	fmt.Println("SUCCEED")
@@ -204,8 +207,12 @@ func genProvisionScript(netModel *netModel.NetModel) {
 	panicOnError(execTemplate(provisionTemplate, netModel, networkPath, "provision.sh"))
 
 	args := []string{"+x", filepath.Join(filepath.Clean(networkPath), "provision.sh")}
-	if err := exec.Command("chmod", args...).Run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+
+	cmd := exec.Command("chmod", args...)
+	
+	if combinedOutput, err := cmd.CombinedOutput(); err != nil {
+		fmt.Printf("Err: %s\n", err)
+		fmt.Printf("\tCombined Output: %s\n", combinedOutput)
 		os.Exit(1)
 	}
 
@@ -258,7 +265,7 @@ func genGenesisBlock(netModel *netModel.NetModel, genesisPath, genesisFile strin
 	fmt.Print("Generating genesis block: ")
 
 	args := []string{
-		"-profile", netModel.Name + "Genesis",
+		"-profile", netModel.Name + "Genesis", //netmodel.Name is the "network" in yaml
 		"-outputBlock", filepath.Join(genesisPath, genesisFile),
 	}
 
@@ -267,10 +274,12 @@ func genGenesisBlock(netModel *netModel.NetModel, genesisPath, genesisFile strin
 	netPath, _ := filepath.Abs(networkPath)
 	cmd.Env = append(cmd.Env, fmt.Sprintf("FABRIC_CFG_PATH=%s", netPath))
 
-	if err := cmd.Run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+	if combinedOutput, err := cmd.CombinedOutput(); err != nil {
+		fmt.Printf("Err: %s\n", err)
+		fmt.Printf("\tCombined Output: %s\n", combinedOutput)
 		os.Exit(1)
 	}
+
 	fmt.Println("SUCCEED")
 }
 
@@ -289,10 +298,12 @@ func genChannelConfig(netModel *netModel.NetModel, channelsPath string) {
 		netPath, _ := filepath.Abs(networkPath)
 		cmd.Env = append(cmd.Env, fmt.Sprintf("FABRIC_CFG_PATH=%s", netPath))
 
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+		if combinedOutput, err := cmd.CombinedOutput(); err != nil {
+			fmt.Printf("Err: %s\n", err)
+			fmt.Printf("\tCombined Output: %s\n", combinedOutput)
 			os.Exit(1)
 		}
+
 		fmt.Println("SUCCEED")
 	}
 }
@@ -320,7 +331,11 @@ func copyFolder(sPath, dPath string) {
 	}
 
 	cpArgs := []string{"-r", sourcePath, destinationPath}
-	if err = exec.Command("cp", cpArgs...).Run(); err != nil {
+
+	cmd := exec.Command("cp", cpArgs...)
+	if combinedOutput, err := cmd.CombinedOutput(); err != nil {
+		fmt.Printf("Err: %s\n", err)
+		fmt.Printf("\tCombined Output: %s\n", combinedOutput)
 		os.Exit(1)
 	}
 }
