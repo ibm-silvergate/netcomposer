@@ -2,7 +2,6 @@ package netModel
 
 import (
 	"fmt"
-
 	"github.com/ibm-silvergate/netcomposer/netSpec"
 )
 
@@ -11,6 +10,7 @@ type NetModel struct {
 	FabricVersionTag     string
 	CaVersionTag         string
 	ThirdpartyVersionTag string
+	ChannelCreationDelay int
 	Name                 string
 	Domain               string
 	Description          string
@@ -254,6 +254,7 @@ func BuildNetModelFrom(spec *netSpec.NetSpec) *NetModel {
 		FabricVersionTag:     spec.FabricVersionTag,
 		CaVersionTag:         spec.FabricVersionTag,
 		ThirdpartyVersionTag: spec.ThirdpartyVersionTag,
+		ChannelCreationDelay: spec.ChannelCreationDelay,
 		Name:                 spec.Network,
 		Domain:               spec.Domain,
 		Description:          spec.Description,

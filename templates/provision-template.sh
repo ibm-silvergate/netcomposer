@@ -95,6 +95,9 @@ fi
 startNetwork
 panicOnError $? "Basic containers successfully started!" "Error while starting basic containers (Peers, Orderers, CAs, ...)"
 
+# wait for containers to start
+sleep {{.ChannelCreationDelay}}
+
 ORDERER_CA='/etc/hyperledger/fabric/crypto-config/orderer/msp/tlscacerts/tlsca.{{$.Domain}}-cert.pem'
 
 {{range $i,$ch := $.Channels}}
