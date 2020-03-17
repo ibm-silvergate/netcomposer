@@ -35,7 +35,6 @@ import (
 var (
 	specFile      string
 	templatesPath string
-	toolsPath     string
 	outputPath    string
 )
 
@@ -53,7 +52,6 @@ var (
 func readFlags() {
 	flag.StringVar(&specFile, "spec", "", "spec file e.g. samplenet.yaml")
 	flag.StringVar(&templatesPath, "templates", "templates", "templates path e.g. ./templates")
-	flag.StringVar(&toolsPath, "tools", "tools", "tools path e.g. ./tools")
 	flag.StringVar(&outputPath, "output", "out", "tools path e.g. $HOME/HF-networks")
 	flag.Parse()
 
@@ -228,16 +226,6 @@ func fixSKFilename(path string, f os.FileInfo, err error) (e error) {
 	return
 }
 
-func architecture() string {
-	arch, err := exec.Command("uname", "-m", "-s").Output()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return strings.Replace(strings.ToLower(strings.TrimSpace(string(arch))), " ", "-", -1)
-}
-
 func genCryptoMaterial(netModel *netModel.NetModel, cryptoConfigFile string) {
 	fmt.Print("Generating crypto material: ")
 	cryptoConfigFilePath := filepath.Join(filepath.Join(outputPath, netModel.Name), cryptoConfigFile)
@@ -248,7 +236,7 @@ func genCryptoMaterial(netModel *netModel.NetModel, cryptoConfigFile string) {
 		"--output", cryptoConfigPath,
 	}
 
-	if err := exec.Command(fmt.Sprintf("%s/%s/cryptogen", toolsPath, architecture()), args...).Run(); err != nil {
+	if err := exec.Command(fmt.Sprintf("cryptogen"), args...).Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -269,7 +257,7 @@ func genGenesisBlock(netModel *netModel.NetModel, genesisPath, genesisFile strin
 		"-outputBlock", filepath.Join(genesisPath, genesisFile),
 	}
 
-	cmd := exec.Command(fmt.Sprintf("%s/%s/configtxgen", toolsPath, architecture()), args...)
+	cmd := exec.Command(fmt.Sprintf("configtxgen"), args...)
 
 	netPath, _ := filepath.Abs(networkPath)
 	cmd.Env = append(cmd.Env, fmt.Sprintf("FABRIC_CFG_PATH=%s", netPath))
@@ -293,7 +281,7 @@ func genChannelConfig(netModel *netModel.NetModel, channelsPath string) {
 			"-channelID", ch.Name,
 		}
 
-		cmd := exec.Command(fmt.Sprintf("%s/%s/configtxgen", toolsPath, architecture()), args...)
+		cmd := exec.Command(fmt.Sprintf("configtxgen"), args...)
 
 		netPath, _ := filepath.Abs(networkPath)
 		cmd.Env = append(cmd.Env, fmt.Sprintf("FABRIC_CFG_PATH=%s", netPath))
