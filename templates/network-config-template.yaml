@@ -48,9 +48,9 @@ organizations: {{range $.PeerOrganizations}}
       - ca.{{.FullName}}
 
     adminPrivateKey:
-      path: ./crypto-config/peerOrganizations/{{.FullName}}/users/Admin@{{.FullName}}/msp/keystore/secret.key
+      path: ../crypto-config/peerOrganizations/{{.FullName}}/users/Admin@{{.FullName}}/msp/keystore/secret.key
     signedCert:
-      path: ./crypto-config/peerOrganizations/{{.FullName}}/users/Admin@{{.FullName}}/msp/signcerts/Admin@{{.FullName}}-cert.pem
+      path: ../crypto-config/peerOrganizations/{{.FullName}}/users/Admin@{{.FullName}}/msp/signcerts/Admin@{{.FullName}}-cert.pem
 {{end}}
 #
 # List of orderers to send transaction and channel create/update requests to.
@@ -66,7 +66,7 @@ orderers: {{range $.Orderers}}
       {{if $.TLSEnabled}}ssl-target-name-override: {{.Name}}{{end}}  
     {{if $.TLSEnabled}}
     tlsCACerts:
-      path: ./crypto-config/ordererOrganizations/{{$.Domain}}/orderers/{{.Name}}/tls/ca.crt
+      path: ../crypto-config/ordererOrganizations/{{$.Domain}}/orderers/{{.Name}}/tls/ca.crt
     {{- end}}
 {{end}}
 #
@@ -84,7 +84,7 @@ peers: {{range $.Peers}}
       {{if $.TLSEnabled}}ssl-target-name-override: {{.Name}}{{end}}
     {{if $.TLSEnabled}}
     tlsCACerts:
-      path: ./crypto-config/peerOrganizations/{{.Organization.FullName}}/peers/{{.Name}}/tls/ca.crt
+      path: ../crypto-config/peerOrganizations/{{.Organization.FullName}}/peers/{{.Name}}/tls/ca.crt
     {{- end}}
 {{end}}
 #
@@ -99,7 +99,7 @@ certificateAuthorities: {{range $.CAs}}
       verify: false
     {{if $.TLSEnabled}}
     tlsCACerts:
-      path: ./crypto-config/peerOrganizations/{{.OrgFullName}}/ca/{{.Name}}-cert.pem
+      path: ../crypto-config/peerOrganizations/{{.OrgFullName}}/ca/{{.Name}}-cert.pem
     {{- end}}
     # Fabric-CA supports dynamic user enrollment via REST APIs. A "root" user, a.k.a registrar, is
     # needed to enroll and invoke new users.

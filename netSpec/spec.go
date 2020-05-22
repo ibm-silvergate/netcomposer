@@ -23,6 +23,7 @@ type NetSpec struct {
 	FabricVersionTag     string           `yaml:"FABRIC_VERSION_TAG"`
 	CaVersionTag         string           `yaml:"CA_VERSION_TAG"`
 	ThirdpartyVersionTag string           `yaml:"THIRDPARTY_VERSION_TAG"`
+	ChannelCreationDelay int			  `yaml:"CHANNEL_CREATION_DELAY"`
 	Network              string           `yaml:"network"`
 	Domain               string           `yaml:"domain"`
 	Description          string           `yaml:"description"`

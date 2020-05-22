@@ -1,5 +1,42 @@
 ################################################################################
 #
+#   Section: Organizations
+#
+#   - This section defines the different organizational identities which will
+#   be referenced later in the configuration.
+#
+################################################################################
+Organizations:
+    - &{{$.OrdererOrganization.Name}}
+        Name: {{$.OrdererOrganization.Name}}
+
+        # ID to load the MSP definition as
+        ID: {{$.OrdererOrganization.Name}}MSP
+
+        # MSPDir is the filesystem path which contains the MSP configuration
+        MSPDir: volumes/crypto-config/ordererOrganizations/{{$.Domain}}/msp
+
+    {{range $.PeerOrganizations}}
+    - &{{.Name}}
+        Name: {{.Name}}
+
+        # ID to load the MSP definition as
+        ID: {{.Name}}MSP
+
+        MSPDir: volumes/crypto-config/peerOrganizations/{{.FullName}}/msp
+
+        AnchorPeers:
+            # AnchorPeers defines the location of peers which can be used
+            # for cross org gossip communication.  Note, this value is only
+            # encoded in the genesis block in the Application section context
+            {{$orgName := .Name}}{{range $.Peers}}{{if eq .Organization.Name $orgName}}
+            - Host: {{.Name}}
+              Port: {{.Port}}
+            {{end}}{{end}}
+    {{end}}
+
+################################################################################
+#
 #   Profile
 #
 #   - Different configuration profiles may be encoded here to be specified
@@ -55,40 +92,4 @@ Profiles:
       Application:
         Organizations: {{range .Organizations}}
           - *{{.Organization.Name}}{{end}}
-    {{end}}
-################################################################################
-#
-#   Section: Organizations
-#
-#   - This section defines the different organizational identities which will
-#   be referenced later in the configuration.
-#
-################################################################################
-Organizations:
-    - &{{$.OrdererOrganization.Name}}
-        Name: {{$.OrdererOrganization.Name}}
-
-        # ID to load the MSP definition as
-        ID: {{$.OrdererOrganization.Name}}MSP
-
-        # MSPDir is the filesystem path which contains the MSP configuration
-        MSPDir: volumes/crypto-config/ordererOrganizations/{{$.Domain}}/msp
-
-    {{range $.PeerOrganizations}}
-    - &{{.Name}}
-        Name: {{.Name}}
-
-        # ID to load the MSP definition as
-        ID: {{.Name}}MSP
-
-        MSPDir: volumes/crypto-config/peerOrganizations/{{.FullName}}/msp
-
-        AnchorPeers:
-            # AnchorPeers defines the location of peers which can be used
-            # for cross org gossip communication.  Note, this value is only
-            # encoded in the genesis block in the Application section context
-            {{$orgName := .Name}}{{range $.Peers}}{{if eq .Organization.Name $orgName}}
-            - Host: {{.Name}}
-              Port: {{.Port}}
-            {{end}}{{end}}
     {{end}}

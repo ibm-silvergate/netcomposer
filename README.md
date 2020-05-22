@@ -19,6 +19,8 @@ The tool takes as input a config file specifying the network components:
     CA_VERSION_TAG: 1.3.0
     # version tag for couchdb, kafka, zookeeper
     THIRDPARTY_VERSION_TAG: 0.4.13
+    # delay (in ms) between starting the network and creating the channels
+    CHANNEL_CREATION_DELAY: 10
 
     network:     "samplenet"
     domain:      "samplenet.com"
@@ -64,11 +66,11 @@ The tool takes as input a config file specifying the network components:
 
 #### Starting the network
 
-    .out/samplenet/provision.sh
+    ./out/samplenet/provision.sh
 
 #### Stopping the network
 
-    .out/samplenet/provision.sh stop
+    ./out/samplenet/provision.sh stop
     
 #### Instantiate a chaincode
 
